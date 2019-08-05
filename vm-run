@@ -1,0 +1,95 @@
+#!/bin/bash -e
+# SPDX-License-Identifier: GPL-2.0
+#
+# vm-run: Run command under QEMU emulated root
+#
+# Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
+#
+
+SCRIPT=$(mktemp)
+export > $SCRIPT
+
+# Additional options to qemu
+OPTS=
+APPEND=
+
+usage() {
+	echo "Usage: $0 [options] command..."
+	echo "Options:"
+	echo "    -h|--help      this help"
+	echo "    --qemu='...'   pass additional options to qemu"
+	echo "    --append='...' append to kernel cmdline"
+	echo "    --             no options after this marker"
+	echo "    command...     will be eval'ed on the target"
+	exit 1
+}
+
+for opt do
+	shift
+	case "$opt" in
+		-h|--help)  usage ;;
+		--qemu=*)   OPTS+=" ${opt#*=}" ;;
+		--append=*) APPEND+=" ${opt#*=}" ;;
+		--) break ;;
+		-*) echo "Unknwon option $opt $*"; usage ;;
+		*)  set -- "$opt" "$@"; break ;;
+	esac
+done
+
+test "$*" || usage
+
+printf "cd %q\n" "$PWD" >> $SCRIPT
+printf "eval" >> $SCRIPT
+printf " %q" "$@" >> $SCRIPT
+printf "\n" >> $SCRIPT
+chmod a+rx $SCRIPT
+
+# Enable filename globbing
+set +f
+
+case "$HOSTTYPE" in
+	powerpc64le) CONSOLE=hvc0 ;;
+	aarch64)     CONSOLE=ttyAMA0 ;;
+	*)           CONSOLE=ttyS0 ;;
+esac
+
+# Quirks
+if [ "$HOSTTYPE" = x86_64 -a -e /usr/share/qemu/bios.bin ]; then
+	# BIOS that doesn't clear screen unlike default bios-256k.bin
+	OPTS+=" -bios bios.bin"
+fi
+
+# If KVM is accessible use it.
+if [ -w /dev/kvm ]; then
+	# Fallback to TCG in case of something.
+	OPTS+=" -machine accel=kvm:tcg"
+else
+	# Required, because on x86 `qemu' by default is `qemu-kvm'.
+	OPTS+=" -no-kvm"
+fi
+
+(set -x;
+ time -p \
+ qemu \
+	-m 128M \
+	$OPTS \
+	-nodefaults \
+	-nographic \
+	-no-reboot \
+	-fsdev local,id=root,path=/,security_model=none \
+	-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
+	-serial stdio \
+	-kernel /boot/vmlinuz-* \
+	-initrd /boot/initrd-* \
+	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT $APPEND" \
+	)
+
+# Script is not deleted intentionally.
+if [ -s $SCRIPT.ret ]; then
+	read ret < $SCRIPT.ret
+	echo Exited with $ret
+	exit $ret
+else
+	echo "Error: no exit code is found"
+	exit 1
+fi

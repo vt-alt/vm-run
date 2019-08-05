@@ -1,0 +1,32 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# vm-init: actual init script
+#
+# Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
+#
+
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+echo Running vm-init
+mount -t tmpfs tmpfs /tmp
+mount -t sysfs -o nosuid,noexec,nodev sys /sys
+mount -t proc -o nosuid,noexec,nodev proc /proc
+mount -n -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
+mkdir -p /dev/pts
+mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
+
+ip link set dev lo up
+
+# Extract script name from kernel cmdline
+read cmdline < /proc/cmdline
+SCRIPT=${cmdline#* SCRIPT=}
+SCRIPT=${SCRIPT%% *}
+
+$SCRIPT
+
+RET=$?
+echo $RET > $SCRIPT.ret
+
+echo Exiting with $RET
+poweroff -ff
