@@ -48,9 +48,9 @@ chmod a+rx $SCRIPT
 set +f
 
 case "$HOSTTYPE" in
-	powerpc64le) CONSOLE=hvc0 ;;
-	aarch64)     CONSOLE=ttyAMA0 ;;
-	*)           CONSOLE=ttyS0 ;;
+	powerpc64le) CONSOLE=hvc0    QEMU=qemu-system-ppc64 ;;
+	aarch64)     CONSOLE=ttyAMA0 QEMU=qemu-system-aarch64 ;;
+	*)           CONSOLE=ttyS0   QEMU=qemu ;;
 esac
 
 # Quirks
@@ -63,15 +63,15 @@ fi
 if [ -w /dev/kvm ]; then
 	# Fallback to TCG in case of something.
 	OPTS+=" -machine accel=kvm:tcg"
-else
+elif [ "$QEMU" = qemu ]; then
 	# Required, because on x86 `qemu' by default is `qemu-kvm'.
 	OPTS+=" -no-kvm"
 fi
 
 (set -x;
  time -p \
- qemu \
-	-m 128M \
+ $QEMU \
+	-m 256M \
 	$OPTS \
 	-nodefaults \
 	-nographic \
