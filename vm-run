@@ -9,14 +9,20 @@
 SCRIPT=$(mktemp)
 export > $SCRIPT
 
-# Additional options to qemu
+# Additional options to qemu run
 OPTS=
 APPEND=
+NOCMD=
+TIME=time
+SBIN=
 
 usage() {
 	echo "Usage: $0 [options] command..."
 	echo "Options:"
 	echo "    -h|--help      this help"
+	echo "    -s|--silent    do not show qemu command"
+	echo "    --sbin         append sbin dirs to the PATH"
+	echo "    --udevd        start udevd"
 	echo "    --qemu='...'   pass additional options to qemu"
 	echo "    --append='...' append to kernel cmdline"
 	echo "    --             no options after this marker"
@@ -27,17 +33,21 @@ usage() {
 for opt do
 	shift
 	case "$opt" in
-		-h|--help)  usage ;;
-		--qemu=*)   OPTS+=" ${opt#*=}" ;;
-		--append=*) APPEND+=" ${opt#*=}" ;;
+		-h|--help)   usage ;;
+		-s|--silent) NOCMD=y TIME= ;;
+		--sbin)      SBIN=y ;;
+		--udevd)     APPEND+=" UDEVD=y" ;;
+		--qemu=*)    OPTS+=" ${opt#*=}" ;;
+		--append=*)  APPEND+=" ${opt#*=}" ;;
 		--) break ;;
-		-*) echo "Unknwon option $opt $*"; usage ;;
+		-*) echo "Unknown option $opt $*"; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
 	esac
 done
 
 test "$*" || usage
 
+[ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
 printf "cd %q\n" "$PWD" >> $SCRIPT
 printf "eval" >> $SCRIPT
 printf " %q" "$@" >> $SCRIPT
@@ -48,9 +58,19 @@ chmod a+rx $SCRIPT
 set +f
 
 case "$HOSTTYPE" in
-	powerpc64le) CONSOLE=hvc0    QEMU=qemu-system-ppc64 ;;
-	aarch64)     CONSOLE=ttyAMA0 QEMU=qemu-system-aarch64 OPTS+=" -machine virt -cpu max" ;;
-	*)           CONSOLE=ttyS0   QEMU=qemu ;;
+	powerpc64le)
+		CONSOLE=hvc0
+		QEMU=qemu-system-ppc64
+		;;
+	aarch64)
+		CONSOLE=ttyAMA0
+		QEMU=qemu-system-aarch64
+		OPTS+=" -machine virt -cpu max"
+		;;
+	*)
+		CONSOLE=ttyS0
+		QEMU=qemu
+		;;
 esac
 
 # Quirks
@@ -68,8 +88,15 @@ elif [ "$QEMU" = qemu ]; then
 	OPTS+=" -no-kvm"
 fi
 
-(set -x;
- time -p \
+if ! mountpoint -q /proc; then
+	echo "====================================="
+	echo "=   Warning: /proc is not mounted   ="
+	echo "=            failures may occur!    ="
+	echo "====================================="
+fi
+
+(test "$NOCMD" || set -x
+ $TIME \
  $QEMU \
 	-m 256M \
 	$OPTS \
@@ -81,15 +108,14 @@ fi
 	-serial stdio \
 	-kernel /boot/vmlinuz-* \
 	-initrd /boot/initrd-* \
-	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT $APPEND" \
+	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT $APPEND"
 	)
 
 # Script is not deleted intentionally.
 if [ -s $SCRIPT.ret ]; then
 	read ret < $SCRIPT.ret
-	echo Exited with $ret
 	exit $ret
 else
-	echo "Error: no exit code is found"
+	echo "Error: no exit code is found, failure."
 	exit 1
 fi

@@ -16,6 +16,6 @@ modprobe virtio_pci
 #   version=9p2000.L to support linux extensions, like xattr
 #   trans=virtio for qemu
 #   access=any single connect to 9p server
-mount -n -v -t 9p -o version=9p2000.L,trans=virtio,access=any /dev/root /mnt
+mount -n -t 9p -o version=9p2000.L,trans=virtio,access=any /dev/root /mnt
 
 exec switch_root /mnt /usr/sbin/vm-init

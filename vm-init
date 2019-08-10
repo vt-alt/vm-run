@@ -8,7 +8,6 @@
 
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
-echo Running vm-init
 mount -t tmpfs tmpfs /tmp
 mount -t sysfs -o nosuid,noexec,nodev sys /sys
 mount -t proc -o nosuid,noexec,nodev proc /proc
@@ -16,17 +15,33 @@ mount -n -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 mkdir -p /dev/pts
 mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
 
-ip link set dev lo up
+ip link set dev lo up 2>/dev/null
+
+if grep -q UDEVD=y /proc/cmdline; then
+	udevd --daemon --resolve-names=never
+	udevadm trigger --type=subsystems --action=add
+	udevadm trigger --type=devices --action=add
+	udevadm settle
+fi
+
+# test writability
+if tmp=$(mktemp -p /usr/src 2>/dev/null); then
+	rm $tmp
+else
+	echo "***************************************************"
+	echo "*  Error: Impossible to create files in /usr/src  *"
+	echo "*         Exit code from qemu cmd will be lost!   *"
+	echo "***************************************************"
+fi
 
 # Extract script name from kernel cmdline
 read cmdline < /proc/cmdline
 SCRIPT=${cmdline#* SCRIPT=}
 SCRIPT=${SCRIPT%% *}
 
-$SCRIPT
+setsid --ctty --wait $SCRIPT
 
 RET=$?
-echo $RET > $SCRIPT.ret
-
-echo Exiting with $RET
-poweroff -ff
+echo $RET 2>/dev/null > $SCRIPT.ret ||
+	echo Exit code $RET is lost
+poweroff -f

@@ -68,16 +68,19 @@ KERN=$(ls /boot/vmlinuz-*)
 KVER=${KERN#/boot/vmlinuz-}
 # Create /boot/initrd-$KVER.img
 # This will take ~5 sec.
-time -p make-initrd --no-checks --config=%_libexecdir/%name/config.mk --kernel=$KVER
+time make-initrd --no-checks --config=%_libexecdir/%name/config.mk --kernel=$KVER
 
 # Fix permissions to boot the installed kernel
 (
   find /boot -type f,d -print0
   find /lib/modules -type f,d -print0
 ) | xargs -0r chmod a+rX
-#chmod a+w /lib/modules/*/
 
-# u?mount should to be readable
+# Required in case of --udevd option to vm-run
+mkdir -p /run/udev
+chmod a+twx /run/udev
+
+# u&mount should to be readable
 control mount unprivileged
 
 %changelog
