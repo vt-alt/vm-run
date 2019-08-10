@@ -49,7 +49,7 @@ set +f
 
 case "$HOSTTYPE" in
 	powerpc64le) CONSOLE=hvc0    QEMU=qemu-system-ppc64 ;;
-	aarch64)     CONSOLE=ttyAMA0 QEMU=qemu-system-aarch64 ;;
+	aarch64)     CONSOLE=ttyAMA0 QEMU=qemu-system-aarch64 OPTS+=" -machine virt -cpu max" ;;
 	*)           CONSOLE=ttyS0   QEMU=qemu ;;
 esac
 
