@@ -80,6 +80,10 @@ time make-initrd --no-checks --config=%_libexecdir/%name/config.mk --kernel=$KVE
 mkdir -p /run/udev
 chmod a+twx /run/udev
 
+# Just in case
+mkdir -p /run/dbus
+chmod a+twx /run/dbus
+
 # u&mount should to be readable
 control mount unprivileged
 

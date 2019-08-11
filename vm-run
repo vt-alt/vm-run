@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -efu
 # SPDX-License-Identifier: GPL-2.0
 #
 # vm-run: Run command under QEMU emulated root
@@ -19,14 +19,17 @@ SBIN=
 usage() {
 	echo "Usage: $0 [options] command..."
 	echo "Options:"
-	echo "    -h|--help      this help"
-	echo "    -s|--silent    do not show qemu command"
-	echo "    --sbin         append sbin dirs to the PATH"
-	echo "    --udevd        start udevd"
-	echo "    --qemu='...'   pass additional options to qemu"
-	echo "    --append='...' append to kernel cmdline"
-	echo "    --             no options after this marker"
-	echo "    command...     will be eval'ed on the target"
+	echo "    -h|--help        this help"
+	echo "    -s|--silent      do not show qemu command"
+	echo "    --sbin           append sbin dirs to the PATH"
+	echo "    --udevd          start udevd"
+	echo "    --qemu='...'     pass additional options to qemu"
+	echo "    --append='...'   append to kernel cmdline"
+	echo "    --drive=         shortcut to pass '-drive file=' to qemu"
+	echo "    --overlay=fs[,size=][:path]"
+	echo "                     auto create overlay filesystem over path"
+	echo "    --               no options after this marker"
+	echo "    command...       will be eval'ed on the target"
 	exit 1
 }
 
@@ -39,43 +42,57 @@ for opt do
 		--udevd)     APPEND+=" UDEVD=y" ;;
 		--qemu=*)    OPTS+=" ${opt#*=}" ;;
 		--append=*)  APPEND+=" ${opt#*=}" ;;
+		--drive=*)   OPTS+=" -drive file=${opt#*=}" ;;
+		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*"; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
 	esac
 done
 
-test "$*" || usage
+# If no command run shell
+if [ -z "$*" ]; then
+	set bash
+	SBIN=y
+fi
 
+# Prepare env
 [ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
+# Because 9p cannot handle redirection from deleted files and as
+# a consequence cannot handle here-documents move TMPDIR to tmpfs
+printf "TMPDIR=/tmp\n" >> $SCRIPT
 printf "cd %q\n" "$PWD" >> $SCRIPT
 printf "eval" >> $SCRIPT
-printf " %q" "$@" >> $SCRIPT
-printf "\n" >> $SCRIPT
+printf  " %q" "$@" >> $SCRIPT
+printf  "\n" >> $SCRIPT
 chmod a+rx $SCRIPT
-
-# Enable filename globbing
-set +f
 
 case "$HOSTTYPE" in
 	powerpc64le)
+		PACKAGE=qemu-system-ppc-core
 		CONSOLE=hvc0
 		QEMU=qemu-system-ppc64
 		;;
 	aarch64)
+		PACKAGE=qemu-system-aarch64-core
 		CONSOLE=ttyAMA0
 		QEMU=qemu-system-aarch64
 		OPTS+=" -machine virt -cpu max"
 		;;
-	*)
+	i586|x86_64)
+		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
+		# On x86 qemu is symlink to qemu-kvm
 		QEMU=qemu
 		;;
+	*)
+		echo "Error: architecture $HOSTTYPE is unknown"
+		exit 1
 esac
 
 # Quirks
-if [ "$HOSTTYPE" = x86_64 -a -e /usr/share/qemu/bios.bin ]; then
-	# BIOS that doesn't clear screen unlike default bios-256k.bin
+if [ -e /usr/share/qemu/bios.bin ]; then
+	# x86 BIOS that doesn't clear screen unlike default bios-256k.bin
 	OPTS+=" -bios bios.bin"
 fi
 
@@ -84,7 +101,7 @@ if [ -w /dev/kvm ]; then
 	# Fallback to TCG in case of something.
 	OPTS+=" -machine accel=kvm:tcg"
 elif [ "$QEMU" = qemu ]; then
-	# Required, because on x86 `qemu' by default is `qemu-kvm'.
+	# Required on `qemu-kvm'.
 	OPTS+=" -no-kvm"
 fi
 
@@ -95,7 +112,9 @@ if ! mountpoint -q /proc; then
 	echo "====================================="
 fi
 
-(test "$NOCMD" || set -x
+(
+ set +f # Enable filename globbing
+ test "$NOCMD" || set -x
  $TIME \
  $QEMU \
 	-m 256M \
@@ -105,13 +124,13 @@ fi
 	-no-reboot \
 	-fsdev local,id=root,path=/,security_model=none \
 	-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
-	-serial stdio \
+	-serial mon:stdio \
 	-kernel /boot/vmlinuz-* \
 	-initrd /boot/initrd-* \
-	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT $APPEND"
-	)
+	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT$APPEND"
+)
 
-# Script is not deleted intentionally.
+# Temporary script is not deleted intentionally.
 if [ -s $SCRIPT.ret ]; then
 	read ret < $SCRIPT.ret
 	exit $ret

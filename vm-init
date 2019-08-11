@@ -9,11 +9,24 @@
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 mount -t tmpfs tmpfs /tmp
+mount -t tmpfs tmpfs /var/log
 mount -t sysfs -o nosuid,noexec,nodev sys /sys
 mount -t proc -o nosuid,noexec,nodev proc /proc
-mount -n -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
-mkdir -p /dev/pts
+
+mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
+ln -sf /proc/kcore     /dev/core
+ln -sf /proc/self/fd   /dev/fd
+ln -sf /proc/self/fd/0 /dev/stdin
+ln -sf /proc/self/fd/1 /dev/stdout
+ln -sf /proc/self/fd/2 /dev/stderr
+
+mount -t configfs configfs /sys/kernel/config
+mount -t debugfs debugfs /sys/kernel/debug
+mount -t securityfs securityfs /sys/kernel/security
+
+mkdir -p /dev/pts /dev/shm
 mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
 
 ip link set dev lo up 2>/dev/null
 
@@ -22,6 +35,9 @@ if grep -q UDEVD=y /proc/cmdline; then
 	udevadm trigger --type=subsystems --action=add
 	udevadm trigger --type=devices --action=add
 	udevadm settle
+else
+	# try to load some modules
+	modprobe --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
 fi
 
 # test writability
@@ -34,14 +50,63 @@ else
 	echo "***************************************************"
 fi
 
-# Extract script name from kernel cmdline
-read cmdline < /proc/cmdline
+# Extract parameters from kernel cmdline
+read -r cmdline < /proc/cmdline
+
+# Handle --overlay option
+UMOUNT=
+if [ -z "${cmdline/* OVERLAY=*}" ]; then
+	OVERLAY=${cmdline#* OVERLAY=}
+	OVERLAY=${OVERLAY%% *}
+	IFS=: read ovfs ovpath <<< "$OVERLAY"
+	IFS=, read ovfs ovopts <<< "$ovfs"
+	mnt=/mnt
+	if [ -b "$ovfs" ]; then
+		# full device path
+		mount -n "$ovfs" $mnt
+	elif [ -b "/dev/$ovfs" ]; then
+		# short device name
+		mount -n "/dev/$ovfs" $mnt
+	elif [ -d "$ovfs" ]; then
+		# use existing dir
+		mnt=$ovfs
+	elif [ "$ovfs" = tmpfs ]; then
+		# auto-create tmpfs mount
+		mount -t tmpfs ${ovopts:+-o $ovopts} tmpfs $mnt
+	elif [ "$ovfs" = ext4 ]; then
+		# auto-create ext4 partition
+		size=${ovopts#*size=}
+		size=${size%%,*}
+		img=/usr/src/ext4.img
+		# do not delete data if it already exists
+		if ! /sbin/tune2fs -l $img >/dev/null 2>&1; then
+			> $img
+			truncate -s ${size:-11M} $img
+			/sbin/mkfs.ext4 -q $img
+		fi
+		mount -t ext4 $img $mnt
+	else
+		echo "Unknown how to overlay $OVERLAY"
+		unset mnt
+	fi
+	if [ "$mnt" ]; then
+		mkdir -p $mnt/upper $mnt/work
+		: ${ovpath:=/usr/src}
+		mount -t overlay -olowerdir=$ovpath,upperdir=$mnt/upper,workdir=$mnt/work overlay $ovpath
+		UMOUNT=$ovpath
+	fi
+	unset mnt ovfs ovopts ovpath
+fi
+
 SCRIPT=${cmdline#* SCRIPT=}
 SCRIPT=${SCRIPT%% *}
-
 setsid --ctty --wait $SCRIPT
 
 RET=$?
+[ "$UMOUNT" ] && umount -n --lazy $UMOUNT
 echo $RET 2>/dev/null > $SCRIPT.ret ||
 	echo Exit code $RET is lost
+
+# Disable `reboot: Power down' message
+echo 0 > /proc/sys/kernel/printk
 poweroff -f
