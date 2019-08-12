@@ -72,6 +72,7 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-ppc-core
 		CONSOLE=hvc0
 		QEMU=qemu-system-ppc64
+		OPTS+=" -cpu power8,compat=power7"
 		;;
 	aarch64)
 		PACKAGE=qemu-system-aarch64-core
