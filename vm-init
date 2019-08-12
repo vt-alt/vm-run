@@ -39,6 +39,7 @@ else
 	# try to load some modules
 	modprobe --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
 fi
+modprobe virtio_rng
 
 # test writability
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then
