@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# Strip options to vm-run itself so that warning message will output
+# only real command.
+for opt do
+	shift
+	case "$opt" in
+		-*) ;;
+		--) break ;;
+		*)  set -- "$opt" "$@"; break ;;
+	esac
+done
+
+echo "*****************************************************"
+echo "Warning: vm-run is not supported on your architecture"
+echo "This command will be skipped: $*"
+echo "Assuming it would finish with exit 0"
+echo "*****************************************************"
+
+exit 0
