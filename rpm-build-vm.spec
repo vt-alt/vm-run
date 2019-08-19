@@ -6,8 +6,8 @@
 #
 
 Name: rpm-build-vm
-Version: 1.0
-Release: alt5
+Version: 1.1
+Release: alt1
 
 Summary: RPM helper to run in virtualised environment
 License: GPL-2.0
@@ -114,6 +114,9 @@ install -D -p -m 0755 vm-run-stub %buildroot%_bindir/vm-run
 [ -d /.host -a -d /.in -a -d /.out ]
 
 %changelog
+* Mon Aug 19 2019 Vitaly Chikunov <vt@altlinux.org> 1.1-alt1
+- Do not use `qemu' binary on x86 due to qemu repackage.
+
 * Mon Aug 19 2019 Vitaly Chikunov <vt@altlinux.org> 1.0-alt5
 - Make stub vm-run output a warning message
 

@@ -80,11 +80,15 @@ case "$HOSTTYPE" in
 		QEMU=qemu-system-aarch64
 		OPTS+=" -machine virt -cpu max"
 		;;
-	i586|x86_64)
+	i586)
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
-		# On x86 qemu is symlink to qemu-kvm
-		QEMU=qemu
+		QEMU=qemu-system-i386
+		;;
+	x86_64)
+		PACKAGE=qemu-system-x86-core
+		CONSOLE=ttyS0
+		QEMU=qemu-system-x86_64
 		;;
 	*)
 		echo "Error: architecture $HOSTTYPE is unknown"
@@ -101,9 +105,6 @@ fi
 if [ -w /dev/kvm ]; then
 	# Fallback to TCG in case of something.
 	OPTS+=" -machine accel=kvm:tcg"
-elif [ "$QEMU" = qemu ]; then
-	# Required on `qemu-kvm'.
-	OPTS+=" -no-kvm"
 fi
 
 if ! mountpoint -q /proc; then
