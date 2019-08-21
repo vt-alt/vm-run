@@ -56,6 +56,12 @@ if [ -z "$*" ]; then
 	SBIN=y
 fi
 
+# If we already have root just run the command
+if [ $(whoami) = root ]; then
+	exec "$@"
+	exit 1
+fi
+
 # Prepare env
 [ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
 # Because 9p cannot handle redirection from deleted files and as
