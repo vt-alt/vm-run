@@ -8,38 +8,47 @@
 
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
-mount -t tmpfs tmpfs /tmp
-mount -t tmpfs tmpfs /var/log
-mount -t sysfs -o nosuid,noexec,nodev sys /sys
 mount -t proc -o nosuid,noexec,nodev proc /proc
+read -r cmdline < /proc/cmdline
+if [ -z "${cmdline/* VERBOSE=1*}" ]; then
+	V=-v
+	V() { echo "- $@"; "$@"; }
+else
+	V=
+	V() { "$@"; }
+fi
 
-mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
+V mount -t tmpfs tmpfs /tmp
+V mount -t tmpfs tmpfs /var/log
+V mount -t sysfs -o nosuid,noexec,nodev sys /sys
+
+V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 ln -sf /proc/kcore     /dev/core
 ln -sf /proc/self/fd   /dev/fd
 ln -sf /proc/self/fd/0 /dev/stdin
 ln -sf /proc/self/fd/1 /dev/stdout
 ln -sf /proc/self/fd/2 /dev/stderr
 
-mount -t configfs configfs /sys/kernel/config
-mount -t debugfs debugfs /sys/kernel/debug
-mount -t securityfs securityfs /sys/kernel/security
+V mount -t configfs configfs /sys/kernel/config
+V mount -t debugfs debugfs /sys/kernel/debug
+V mount -t securityfs securityfs /sys/kernel/security
 
 mkdir -p /dev/pts /dev/shm
-mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
-mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
+V mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
+V mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
 
-ip link set dev lo up 2>/dev/null
+V ip link set dev lo up 2>/dev/null
 
 if grep -q UDEVD=y /proc/cmdline; then
-	udevd --daemon --resolve-names=never
-	udevadm trigger --type=subsystems --action=add
-	udevadm trigger --type=devices --action=add
-	udevadm settle
+	V udevd --daemon --resolve-names=never
+	V udevadm trigger --type=subsystems --action=add
+	V udevadm trigger --type=devices --action=add
+	V udevadm settle
 else
 	# try to load some modules
-	modprobe --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
+	V modprobe --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
 fi
-modprobe virtio_rng
+V modprobe virtio_rng
 
 # test writability
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then
@@ -50,9 +59,6 @@ else
 	echo "*         Exit code from qemu cmd will be lost!   *"
 	echo "***************************************************"
 fi
-
-# Extract parameters from kernel cmdline
-read -r cmdline < /proc/cmdline
 
 # Handle --overlay option
 UMOUNT=
@@ -69,16 +75,16 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 	mkdir -p $mnt
 	if [ -b "$ovfs" ]; then
 		# full device path
-		mount -n "$ovfs" $mnt
+		V mount $V -n "$ovfs" $mnt
 	elif [ -b "/dev/$ovfs" ]; then
 		# short device name
-		mount -n "/dev/$ovfs" $mnt
+		V mount $V -n "/dev/$ovfs" $mnt
 	elif [ -d "$ovfs" ]; then
 		# use existing dir
 		mnt=$ovfs
 	elif [ "$ovfs" = tmpfs ]; then
 		# auto-create tmpfs mount
-		mount -t tmpfs ${ovopts:+-o $ovopts} tmpfs $mnt
+		V mount $V -t tmpfs ${ovopts:+-o $ovopts} tmpfs $mnt
 	elif [ "$ovfs" = ext4 ]; then
 		# auto-create ext4 partition
 		size=${ovopts#*size=}
@@ -87,10 +93,10 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 		# do not delete data if it already exists
 		if ! /sbin/tune2fs -l $img >/dev/null 2>&1; then
 			> $img
-			truncate -s ${size:-11M} $img
-			/sbin/mkfs.ext4 -q $img
+			V truncate -s ${size:-11M} $img
+			V /sbin/mkfs.ext4 -q $img
 		fi
-		mount -t ext4 $img $mnt
+		V mount $V -t ext4 -o loop $img $mnt
 		img_count=$((img_count+1))
 	else
 		echo "Unknown how to overlay $OVERLAY"
@@ -99,7 +105,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 	if [ "$mnt" ]; then
 		mkdir -p $mnt/upper $mnt/work
 		: ${ovpath:=/usr/src}
-		mount -t overlay -olowerdir=$ovpath,upperdir=$mnt/upper,workdir=$mnt/work overlay $ovpath
+		V mount $V -t overlay -olowerdir=$ovpath,upperdir=$mnt/upper,workdir=$mnt/work overlay $ovpath
 		UMOUNT=$ovpath
 	fi
 	unset mnt ovfs ovopts ovpath
@@ -109,12 +115,13 @@ unset ov_count img_count prev_cmdline
 SCRIPT=${cmdline#* SCRIPT=}
 SCRIPT=${SCRIPT%% *}
 setsid --ctty --wait $SCRIPT
-
 RET=$?
-[ "$UMOUNT" ] && umount -n --lazy $UMOUNT
+
+[ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
 echo $RET 2>/dev/null > $SCRIPT.ret ||
 	echo Exit code $RET is lost
 
 # Disable `reboot: Power down' message
-echo 0 > /proc/sys/kernel/printk
-poweroff -f
+[ -z "${cmdline/* quiet *}" ] && echo 0 > /proc/sys/kernel/printk
+
+V poweroff -f

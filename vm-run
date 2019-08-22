@@ -6,6 +6,7 @@
 # Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
 #
 
+# Save original env first
 SCRIPT=$(mktemp)
 export > $SCRIPT
 
@@ -15,12 +16,16 @@ APPEND=
 NOCMD=
 TIME=time
 SBIN=
+VERBOSE=
+QUIET=quiet	# no boot messages
 
 usage() {
 	echo "Usage: $0 [options] command..."
 	echo "Options:"
 	echo "    -h|--help        this help"
 	echo "    -s|--silent      do not show qemu command"
+	echo "    --verbose        show vm actions verbosely"
+	echo "    --no-quiet       do not boot kernel too quietly"
 	echo "    --sbin           append sbin dirs to the PATH"
 	echo "    --udevd          start udevd"
 	echo "    --qemu='...'     pass additional options to qemu"
@@ -38,6 +43,8 @@ for opt do
 	case "$opt" in
 		-h|--help)   usage ;;
 		-s|--silent) NOCMD=y TIME= ;;
+		--verbose)   VERBOSE=1 APPEND+=" VERBOSE=1" ;;
+		--no-quiet)  QUIET= ;;
 		--sbin)      SBIN=y ;;
 		--udevd)     APPEND+=" UDEVD=y" ;;
 		--qemu=*)    OPTS+=" ${opt#*=}" ;;
@@ -135,7 +142,7 @@ fi
 	-serial mon:stdio \
 	-kernel /boot/vmlinuz-* \
 	-initrd /boot/initrd-* \
-	-append "console=$CONSOLE mitigations=off nokaslr quiet panic=-1 SCRIPT=$SCRIPT$APPEND"
+	-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
 )
 
 # Temporary script is not deleted intentionally.
