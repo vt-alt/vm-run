@@ -56,12 +56,17 @@ read -r cmdline < /proc/cmdline
 
 # Handle --overlay option
 UMOUNT=
-if [ -z "${cmdline/* OVERLAY=*}" ]; then
-	OVERLAY=${cmdline#* OVERLAY=}
-	OVERLAY=${OVERLAY%% *}
+ov_count=0
+img_count=0
+prev_cmdline=$cmdline
+while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
+	prev_cmdline=${prev_cmdline#* OVERLAY=}
+	OVERLAY=${prev_cmdline%% *}
 	IFS=: read ovfs ovpath <<< "$OVERLAY"
 	IFS=, read ovfs ovopts <<< "$ovfs"
-	mnt=/mnt
+	mnt=/mnt/$ov_count
+	ov_count=$((ov_count+1))
+	mkdir -p $mnt
 	if [ -b "$ovfs" ]; then
 		# full device path
 		mount -n "$ovfs" $mnt
@@ -78,7 +83,7 @@ if [ -z "${cmdline/* OVERLAY=*}" ]; then
 		# auto-create ext4 partition
 		size=${ovopts#*size=}
 		size=${size%%,*}
-		img=/usr/src/ext4.img
+		img=/usr/src/ext4.$img_count.img
 		# do not delete data if it already exists
 		if ! /sbin/tune2fs -l $img >/dev/null 2>&1; then
 			> $img
@@ -86,6 +91,7 @@ if [ -z "${cmdline/* OVERLAY=*}" ]; then
 			/sbin/mkfs.ext4 -q $img
 		fi
 		mount -t ext4 $img $mnt
+		img_count=$((img_count+1))
 	else
 		echo "Unknown how to overlay $OVERLAY"
 		unset mnt
@@ -97,7 +103,8 @@ if [ -z "${cmdline/* OVERLAY=*}" ]; then
 		UMOUNT=$ovpath
 	fi
 	unset mnt ovfs ovopts ovpath
-fi
+done
+unset ov_count img_count prev_cmdline
 
 SCRIPT=${cmdline#* SCRIPT=}
 SCRIPT=${SCRIPT%% *}

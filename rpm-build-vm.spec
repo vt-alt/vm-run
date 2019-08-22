@@ -90,6 +90,9 @@ chmod a+twx /run/dbus
 # u&mount should to be readable
 control mount unprivileged
 
+# for --overlay=
+chmod a+twx /mnt
+
 %else
 # = QEMU un-supported arches =
 
