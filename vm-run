@@ -77,9 +77,6 @@ fi
 
 # Prepare env
 [ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
-# Because 9p cannot handle redirection from deleted files and as
-# a consequence cannot handle here-documents move TMPDIR to tmpfs
-printf "TMPDIR=/tmp\n" >> $SCRIPT
 printf "cd %q\n" "$PWD" >> $SCRIPT
 printf "eval" >> $SCRIPT
 printf  " %q" "$@" >> $SCRIPT
