@@ -43,7 +43,7 @@ for opt do
 	case "$opt" in
 		-h|--help)   usage ;;
 		-s|--silent) NOCMD=y TIME= ;;
-		--verbose)   VERBOSE=1 APPEND+=" VERBOSE=1" ;;
+		--verbose)   VERBOSE=1 APPEND+=" VERBOSE" ;;
 		--no-quiet)  QUIET= ;;
 		--sbin)      SBIN=y ;;
 		--udevd)     APPEND+=" UDEVD=y" ;;
