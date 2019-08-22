@@ -112,6 +112,26 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 done
 unset ov_count img_count prev_cmdline
 
+
+if [ -n "${cmdline/* NOTTY*}" ]; then
+	# resize trick from eudyptula-boot
+	previous=$(stty -g)
+	stty raw -echo min 0 time 5
+	printf '\0337\033[r\033[999;999H\033[6n\0338'
+	# save cursor position
+	# set scroll region to default
+	# move cursor to 999 999
+	# report cursor position
+	# restore cursor position
+	IFS='[;R' read -r _ rows cols _
+	stty "$previous"
+	if [ "$cols" ] && [ "$rows" ]; then
+		V stty cols "$cols" rows "$rows"
+	else
+		[ "$V" ] && echo "Terminal size is unknown"
+	fi
+fi
+
 SCRIPT=${cmdline#* SCRIPT=}
 SCRIPT=${SCRIPT%% *}
 setsid --ctty --wait $SCRIPT

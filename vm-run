@@ -69,6 +69,12 @@ if [ $(whoami) = root ]; then
 	exit 1
 fi
 
+# Signal to vm-init that we don't have tty on stdin,
+# so it will not try to determine terminal size
+if [ ! -t 0 ]; then
+	APPEND+=" NOTTY"
+fi
+
 # Prepare env
 [ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
 # Because 9p cannot handle redirection from deleted files and as
