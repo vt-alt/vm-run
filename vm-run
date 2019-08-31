@@ -8,7 +8,9 @@
 
 # Save original env first
 SCRIPT=$(mktemp)
-export > $SCRIPT
+( LOGNAME=root
+  USER=root
+  export ) > $SCRIPT
 
 # Additional options to qemu run
 OPTS=
@@ -33,6 +35,7 @@ usage() {
 	echo "    --drive=         shortcut to pass '-drive file=' to qemu"
 	echo "    --overlay=fs[,size=][:path]"
 	echo "                     auto create overlay filesystem over path"
+	echo "    --mem=           pass '-m ...' to qemu (default 256M)"
 	echo "    --               no options after this marker"
 	echo "    command...       will be eval'ed on the target"
 	exit 1
@@ -51,6 +54,7 @@ for opt do
 		--append=*)  APPEND+=" ${opt#*=}" ;;
 		--drive=*)   OPTS+=" -drive file=${opt#*=}" ;;
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
+		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*"; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -130,21 +134,28 @@ if ! mountpoint -q /proc; then
 	echo "====================================="
 fi
 
+# Allow setting KERNEL and INITRD by user
+: ${KERNEL:=/boot/vmlinuz-*}
+: ${INITRD:=/boot/initrd-*}
+
+# -serial mon:stdio  to make ^C not break qemu
+# -device virtio-rng-pci  for virtio-rng
 (
  set +f # Enable filename globbing
  test "$NOCMD" || set -x
  $TIME \
  $QEMU \
 	-m 256M \
-	$OPTS \
 	-nodefaults \
 	-nographic \
 	-no-reboot \
 	-fsdev local,id=root,path=/,security_model=none \
 	-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
+	-device virtio-rng-pci \
 	-serial mon:stdio \
-	-kernel /boot/vmlinuz-* \
-	-initrd /boot/initrd-* \
+	-kernel $KERNEL \
+	-initrd $INITRD \
+	$OPTS \
 	-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
 )
 

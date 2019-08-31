@@ -90,8 +90,11 @@ chmod a+twx /run/dbus
 # u&mount should to be readable
 control mount unprivileged
 
-# for --overlay=
+# For --overlay=
 chmod a+twx /mnt
+
+# Allow user creation
+chmod a+r /etc/login.defs
 
 %else
 # = QEMU un-supported arches =

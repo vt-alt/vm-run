@@ -21,6 +21,9 @@ fi
 
 V mount -t tmpfs tmpfs /tmp
 V mount -t tmpfs tmpfs /var/log
+install -g utmp -m660 /dev/null /var/log/btmp
+install -g utmp -m664 /dev/null /var/log/wtmp
+
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
 V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
@@ -30,13 +33,13 @@ ln -sf /proc/self/fd/0 /dev/stdin
 ln -sf /proc/self/fd/1 /dev/stdout
 ln -sf /proc/self/fd/2 /dev/stderr
 
-V mount -t configfs configfs /sys/kernel/config
-V mount -t debugfs debugfs /sys/kernel/debug
+V mount -t configfs   configfs   /sys/kernel/config
+V mount -t debugfs    debugfs    /sys/kernel/debug
 V mount -t securityfs securityfs /sys/kernel/security
 
 mkdir -p /dev/pts /dev/shm
 V mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
-V mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
+V mount -t tmpfs -o mode=1777,size=1M,noexec,nosuid,nodev tmpfs /dev/shm
 
 V ip link set dev lo up 2>/dev/null
 
@@ -47,9 +50,9 @@ if grep -q UDEVD=y /proc/cmdline; then
 	V udevadm settle
 else
 	# try to load some modules
-	V modprobe --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
+	V modprobe --quiet --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
 fi
-V modprobe virtio_rng
+V modprobe virtio-rng
 
 # test writability
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then
