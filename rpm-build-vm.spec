@@ -6,7 +6,7 @@
 #
 
 Name: rpm-build-vm
-Version: 1.2
+Version: 1.3
 Release: alt1
 
 Summary: RPM helper to run in virtualised environment
@@ -121,6 +121,10 @@ install -D -p -m 0755 vm-run-stub %buildroot%_bindir/vm-run
 [ -d /.host -a -d /.in -a -d /.out ]
 
 %changelog
+* Thu Dec 12 2019 Vitaly Chikunov <vt@altlinux.org> 1.3-alt1
+- Initialize cpu and mem to the max, support share_network=1,
+  handle multiple kernels using --kernel= option.
+
 * Sat Aug 31 2019 Vitaly Chikunov <vt@altlinux.org> 1.2-alt1
 - Improvements corresponding to v1.2.
 
