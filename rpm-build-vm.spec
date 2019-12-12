@@ -67,11 +67,12 @@ install -D -p -m 0755 config.mk   %buildroot%_libexecdir/%name/config.mk
 %post
 # We don't have 9pnet_virtio and virtio_pci modules built-in in the kernel,
 # so initrd is needed to preload them before mounting rootfs.
-KERN=$(ls /boot/vmlinuz-*)
-KVER=${KERN#/boot/vmlinuz-}
-# Create /boot/initrd-$KVER.img
-# This will take ~5 sec.
-time make-initrd --no-checks --config=%_libexecdir/%name/config.mk --kernel=$KVER
+
+ls /boot/vmlinuz-* | while read KERN; do
+	KVER=${KERN#/boot/vmlinuz-}
+	echo "Generating initrd for $KERN"
+	make-initrd --no-checks --config=%_libexecdir/%name/config.mk --kernel=$KVER
+done
 
 # Fix permissions to boot the installed kernel
 (

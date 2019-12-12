@@ -38,6 +38,7 @@ usage() {
 	echo "                     auto create overlay filesystem over path"
 	echo "    --mem=           pass '-m ...' to qemu (memory size)"
 	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
+	echo "    --kernel=        kernel vesion to use"
 	echo "    --               no options after this marker"
 	echo "    command...       will be eval'ed on the target"
 	exit 1
@@ -58,6 +59,7 @@ for opt do
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
+		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*"; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -167,9 +169,28 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 	fi
 fi
 
-# Allow setting KERNEL and INITRD by user
-: ${KERNEL:=/boot/vmlinuz-*}
-: ${INITRD:=/boot/initrd-*}
+if [ "${KERNEL-}" ]; then
+	# Kernel version can be exact or match like std-def
+	if [ -e "$KERNEL" ]; then
+		INITRD=${KERNEL/vmlinuz/initrd}
+		INITRD=${INITRD%.img}.img
+	else
+		KERNEL=${KERNEL#/boot/}
+		KERNEL=${KERNEL#initrd-}
+		KERNEL=${KERNEL#vmlinuz-}
+		KERNEL=${KERNEL%.img}
+		if [ -e /boot/initrd-"$KERNEL".img ]; then
+			INITRD=/boot/initrd-"$KERNEL".img
+		else
+			INITRD=$(set +f; ls -ct /boot/initrd-* | fgrep -e "$KERNEL")
+		fi
+	fi
+elif [ -z "${INITRD-}" ]; then
+	# Find newest initrd
+	INITRD=$(set +f; ls -ct /boot/initrd-* | head -1)
+fi
+KERNEL=${INITRD/initrd/vmlinuz}
+KERNEL=${KERNEL%.img}
 
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
