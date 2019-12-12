@@ -20,6 +20,7 @@ TIME=time
 SBIN=
 VERBOSE=
 QUIET=quiet	# no boot messages
+DEF=
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -35,7 +36,8 @@ usage() {
 	echo "    --drive=         shortcut to pass '-drive file=' to qemu"
 	echo "    --overlay=fs[,size=][:path]"
 	echo "                     auto create overlay filesystem over path"
-	echo "    --mem=           pass '-m ...' to qemu (default 256M)"
+	echo "    --mem=           pass '-m ...' to qemu (memory size)"
+	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
 	echo "    --               no options after this marker"
 	echo "    command...       will be eval'ed on the target"
 	exit 1
@@ -55,6 +57,7 @@ for opt do
 		--drive=*)   OPTS+=" -drive file=${opt#*=}" ;;
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
+		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*"; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -134,6 +137,23 @@ if ! mountpoint -q /proc; then
 	echo "====================================="
 fi
 
+if [ -e /proc/meminfo ]; then
+        M=$(grep MemAvailable: /proc/meminfo)
+        M=${M##MemAvailable: }
+        M=${M%% kB}
+        M=$(($M / 1024))
+else
+        M=256
+
+fi
+if [ $M -ge 256 ]; then
+        DEF+=" -m ${M}M"
+fi
+
+NPROC=$(nproc)
+if [ "$NPROC" -gt 1 ]; then
+	DEF+=" -smp $NPROC"
+fi
 # Allow setting KERNEL and INITRD by user
 : ${KERNEL:=/boot/vmlinuz-*}
 : ${INITRD:=/boot/initrd-*}
@@ -145,7 +165,7 @@ fi
  test "$NOCMD" || set -x
  $TIME \
  $QEMU \
-	-m 256M \
+	$DEF \
 	-nodefaults \
 	-nographic \
 	-no-reboot \
