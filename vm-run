@@ -131,10 +131,10 @@ if [ -w /dev/kvm ]; then
 fi
 
 if ! mountpoint -q /proc; then
-	echo "====================================="
-	echo "=   Warning: /proc is not mounted   ="
-	echo "=            failures may occur!    ="
-	echo "====================================="
+	echo "==========================================="
+	echo "Warning: /proc is not mounted              "
+	echo "try: hsh-shell --mountpoints=/proc,/dev/kvm"
+	echo "==========================================="
 fi
 
 if [ -e /proc/meminfo ]; then
