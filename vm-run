@@ -154,6 +154,19 @@ NPROC=$(nproc)
 if [ "$NPROC" -gt 1 ]; then
 	DEF+=" -smp $NPROC"
 fi
+
+if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
+	DEF+=" -nic user,model=virtio-net-pci"
+	if type ip >/dev/null 2>&1; then
+		:
+	elif type ifconfig >/dev/null 2>&1; then
+		:
+	else
+		echo "Warning: To use share_network inside vm-run you may"
+		echo "  need to hsh-install iproute2 or net-tools"
+	fi
+fi
+
 # Allow setting KERNEL and INITRD by user
 : ${KERNEL:=/boot/vmlinuz-*}
 : ${INITRD:=/boot/initrd-*}

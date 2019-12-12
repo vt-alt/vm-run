@@ -50,7 +50,7 @@ if grep -q UDEVD=y /proc/cmdline; then
 	V udevadm settle
 else
 	# try to load some modules
-	V modprobe --quiet --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod
+	V modprobe --quiet --all virtio_blk scsi_mod ata_piix pata_acpi ata_generic sd_mod virtio_net
 fi
 V modprobe virtio-rng
 
@@ -62,6 +62,24 @@ else
 	echo "*  Error: Impossible to create files in /usr/src  *"
 	echo "*         Exit code from qemu cmd will be lost!   *"
 	echo "***************************************************"
+fi
+
+# Prepare network
+network_conf() {
+	local iface=$1
+
+	if type ip >/dev/null 2>&1; then
+		V ip link set $iface up
+		V ip addr add 10.0.2.1/24 dev $iface
+		V ip rout add default via 10.0.2.2
+	elif type ifconfig >/dev/null 2>&1; then
+		V ifconfig lo up
+		V ifconfig $iface 10.0.2.1/24 up
+		V route add default gw 10.0.2.2
+	fi
+}
+if [ $(wc -l < /proc/net/dev) -gt 3 ]; then
+	network_conf $(egrep -vw 'Inter-|face|lo:' /proc/net/dev | head -1 | cut -d: -f1 | tr -d ' ')
 fi
 
 # Handle --overlay option
