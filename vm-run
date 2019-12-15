@@ -109,6 +109,7 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-i386
+		MAXMEM=1536
 		;;
 	x86_64)
 		PACKAGE=qemu-system-x86-core
@@ -144,6 +145,9 @@ if [ -e /proc/meminfo ]; then
         M=${M##MemAvailable: }
         M=${M%% kB}
         M=$(($M / 1024))
+	if [ "$MAXMEM" -a "$M" -gt "$MAXMEM" ]; then
+		M=$MAXMEM
+	fi
 else
         M=256
 
