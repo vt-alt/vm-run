@@ -21,6 +21,7 @@ SBIN=
 VERBOSE=
 QUIET=quiet	# no boot messages
 DEF=
+MAXMEM=
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -145,7 +146,7 @@ if [ -e /proc/meminfo ]; then
         M=${M##MemAvailable: }
         M=${M%% kB}
         M=$(($M / 1024))
-	if [ "$MAXMEM" -a "$M" -gt "$MAXMEM" ]; then
+	if [ "$MAXMEM" ] && [ "$M" -gt "$MAXMEM" ]; then
 		M=$MAXMEM
 	fi
 else
