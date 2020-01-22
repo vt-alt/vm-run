@@ -6,8 +6,8 @@
 #
 
 Name: rpm-build-vm
-Version: 1.4.1
-Release: alt3
+Version: 1.5
+Release: alt1
 
 Summary: RPM helper to run in virtualised environment
 License: GPL-2.0
