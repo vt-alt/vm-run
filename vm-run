@@ -22,6 +22,7 @@ VERBOSE=
 QUIET=quiet	# no boot messages
 DEF=
 MAXMEM=
+MAXCPU=
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -104,7 +105,12 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-aarch64-core
 		CONSOLE=ttyAMA0
 		QEMU=qemu-system-aarch64
-		OPTS+=" -machine virt -cpu max"
+		# Values that can work well both for kvm and tcg
+		OPTS+=" -M virt,gic_version=3 -cpu max"
+		# More cpu and memory is slower launch, so limit them
+		# to sane big values
+		MAXMEM=4096
+		MAXCPU=8
 		;;
 	i586)
 		PACKAGE=qemu-system-x86-core
@@ -131,7 +137,7 @@ fi
 # If KVM is accessible use it.
 if [ -w /dev/kvm ]; then
 	# Fallback to TCG in case of something.
-	OPTS+=" -machine accel=kvm:tcg"
+	OPTS+=" -M accel=kvm:tcg"
 fi
 
 if ! mountpoint -q /proc; then
@@ -159,6 +165,9 @@ fi
 
 NPROC=$(nproc)
 if [ "$NPROC" -gt 1 ]; then
+	if [ "$MAXCPU" ] && [ "$NPROC" -gt "$MAXCPU" ]; then
+		NPROC=$MAXCPU
+	fi
 	DEF+=" -smp $NPROC"
 fi
 
