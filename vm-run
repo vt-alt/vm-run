@@ -94,12 +94,37 @@ printf  " %q" "$@" >> $SCRIPT
 printf  "\n" >> $SCRIPT
 chmod a+rx $SCRIPT
 
+ppc_opts() {
+	# Use `power8' and not `host', because we will transparently
+	# fallback from kvm to tcg. All following options will not
+	# break fallback to tcg.
+	echo -n " -M cap-ibs=broken,cap-cfpc=broken,cap-sbbc=broken"
+	echo -n " -cpu power8"
+	if [ -w /dev/kvm ]; then
+		# In absence of `/usr/sbin/ppc64_cpu' determine SMT by presence
+		# online cores 1-7, (while cores 0,8,.. is not SMT cores.)
+		if grep -q -P '^processor\s+:\s[1234567]$' /proc/cpuinfo; then
+			# If SMT enabled use slower PR (problem state) KVM.
+			echo " -M kvm-type=PR"
+		else
+			# KVM HV is faster, but incompatible with SMT.
+			echo " -M kvm-type=HV"
+		fi
+	else
+		# KVM doesn't support this.
+		echo -n ",compat=power7"
+	fi
+}
+
 case "$HOSTTYPE" in
 	powerpc64le)
 		PACKAGE=qemu-system-ppc-core
 		CONSOLE=hvc0
 		QEMU=qemu-system-ppc64
-		OPTS+=" -cpu power8,compat=power7"
+		OPTS+=$(ppc_opts)
+		# Avoid `CPU time limit exceeded'
+		MAXMEM=32768
+		MAXCPU=8
 		;;
 	aarch64)
 		PACKAGE=qemu-system-aarch64-core
@@ -159,6 +184,8 @@ else
         M=256
 
 fi
+# Round to 256M for ppc
+[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
 if [ $M -ge 256 ]; then
         DEF+=" -m ${M}M"
 fi
