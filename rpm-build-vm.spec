@@ -6,8 +6,8 @@
 #
 
 Name: rpm-build-vm
-Version: 1.7
-Release: alt2
+Version: 1.8
+Release: alt1
 
 Summary: RPM helper to run in virtualised environment
 License: GPL-2.0
@@ -134,6 +134,10 @@ chmod a+r /etc/login.defs
 %endif
 
 %changelog
+* Sat Jun 20 2020 Vitaly Chikunov <vt@altlinux.org> 1.8-alt1
+- aarch64: Fix `.gic_version not found' (qemu).
+- spec: Fix `different set of noarch packages' (girar).
+
 * Mon Feb 24 2020 Vitaly Chikunov <vt@altlinux.org> 1.7-alt2
 - Require /dev/kvm.
 
