@@ -131,7 +131,7 @@ case "$HOSTTYPE" in
 		CONSOLE=ttyAMA0
 		QEMU=qemu-system-aarch64
 		# Values that can work well both for kvm and tcg
-		OPTS+=" -M virt,gic_version=3 -cpu max"
+		OPTS+=" -M virt,gic-version=3 -cpu max"
 		# More cpu and memory is slower launch, so limit them
 		# to sane big values
 		MAXMEM=4096
