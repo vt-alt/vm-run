@@ -10,6 +10,7 @@
 SCRIPT=$(mktemp)
 ( LOGNAME=root
   USER=root
+  declare -fx
   export ) > $SCRIPT
 
 # Additional options to qemu run
