@@ -109,7 +109,7 @@ ppc_opts() {
 			echo " -M kvm-type=PR"
 		else
 			# KVM HV is faster, but incompatible with SMT.
-			echo " -M kvm-type=HV"
+			echo " -M kvm-type=HV,cap-ccf-assist=off"
 		fi
 	else
 		# KVM doesn't support this.
