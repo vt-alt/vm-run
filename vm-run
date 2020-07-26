@@ -41,7 +41,7 @@ usage() {
 	echo "                     auto create overlay filesystem over path"
 	echo "    --mem=           pass '-m ...' to qemu (memory size)"
 	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
-	echo "    --kernel=        kernel vesion to use"
+	echo "    --kernel=        kernel version to use"
 	echo "    --               no options after this marker"
 	echo "    command...       will be eval'ed on the target"
 	exit 1
