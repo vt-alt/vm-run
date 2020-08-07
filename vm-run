@@ -154,6 +154,11 @@ case "$HOSTTYPE" in
 		exit 1
 esac
 
+case "$HOSTTYPE" in
+	i586|x86_64)
+		APPEND+=" no_timer_check" ;;
+esac
+
 # Quirks
 if [ -e /usr/share/qemu/bios.bin ]; then
 	# x86 BIOS that doesn't clear screen unlike default bios-256k.bin
