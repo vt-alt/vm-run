@@ -93,11 +93,6 @@ install -D -p -m 0755 config.mk   %buildroot%_libexecdir/%name/config.mk
 %_sbindir/vm-init
 %_libexecdir/%name
 
-%pre checkinstall
-set -ex
-vm-run --verbose uname
-vm-run --verbose --overlay=ext4 uname
-
 %post
 # We don't have 9pnet_virtio and virtio_pci modules built-in in the kernel,
 # so initrd is needed to preload them before mounting rootfs.
@@ -132,6 +127,11 @@ chmod a+twx /mnt
 # Allow user creation
 chmod a+r /etc/login.defs
 %endif
+
+%pre checkinstall
+set -ex
+vm-run --verbose uname
+vm-run --verbose --overlay=ext4 uname
 
 %changelog
 * Thu Jul 02 2020 Vitaly Chikunov <vt@altlinux.org> 1.10-alt1
