@@ -93,6 +93,8 @@ printf "cd %q\n" "$PWD" >> $SCRIPT
 printf "eval" >> $SCRIPT
 printf  " %q" "$@" >> $SCRIPT
 printf  "\n" >> $SCRIPT
+# Flush console.
+printf  "RET=\$?\nstty sane\nexit \$RET\n" >> $SCRIPT
 chmod a+rx $SCRIPT
 
 ppc_opts() {
