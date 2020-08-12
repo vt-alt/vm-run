@@ -168,4 +168,5 @@ echo $RET 2>/dev/null > $SCRIPT.ret ||
 # Disable `reboot: Power down' message
 [ -z "${cmdline/* quiet *}" ] && echo 0 > /proc/sys/kernel/printk
 
-V poweroff -f
+V sync
+V poweroff -f -n
