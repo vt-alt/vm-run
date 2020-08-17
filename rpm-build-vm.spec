@@ -6,7 +6,7 @@
 #
 
 Name: rpm-build-vm
-Version: 1.13
+Version: 1.14
 Release: alt1
 
 Summary: RPM helper to run in virtualised environment
@@ -142,6 +142,9 @@ vm-run --verbose uname
 vm-run --verbose --overlay=ext4 uname
 
 %changelog
+* Mon Aug 17 2020 Vitaly Chikunov <vt@altlinux.org> 1.14-alt1
+- armh: Enable tcg support.
+
 * Wed Aug 12 2020 Vitaly Chikunov <vt@altlinux.org> 1.13-alt1
 - Make kernel shutdown quicker.
 
