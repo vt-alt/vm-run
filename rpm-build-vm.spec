@@ -15,7 +15,7 @@ Group: Development/Other
 
 Source: %name-%version.tar
 
-%define supported_arches %ix86 x86_64 ppc64le aarch64
+%define supported_arches %ix86 x86_64 ppc64le aarch64 armh
 
 %ifarch %supported_arches
 # = QEMU supported arches =
@@ -44,6 +44,9 @@ Requires: qemu-system-ppc-core
 %endif
 %ifarch aarch64
 Requires: qemu-system-aarch64-core
+%endif
+%ifarch armh
+Requires: qemu-system-arm-core
 %endif
 
 %description
@@ -126,6 +129,11 @@ chmod a+twx /mnt
 
 # Allow user creation
 chmod a+r /etc/login.defs
+
+%ifarch armh
+# Workaround to KVM not working on armh
+chmod go-rwx /dev/kvm
+%endif
 %endif
 
 %pre checkinstall

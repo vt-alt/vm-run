@@ -140,6 +140,15 @@ case "$HOSTTYPE" in
 		MAXMEM=4096
 		MAXCPU=8
 		;;
+	armh)
+		PACKAGE=qemu-system-arm-core
+		CONSOLE=ttyAMA0
+		QEMU=qemu-system-arm
+		OPTS+=" -M virt,highmem=off -cpu max"
+		APPEND+=" watchdog_thresh=60"
+		MAXMEM=2047
+		MAXCPU=4
+		;;
 	i586)
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
