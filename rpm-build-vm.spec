@@ -10,13 +10,35 @@ Version: 1.14
 Release: alt1
 
 Summary: RPM helper to run in virtualised environment
-License: GPL-2.0
+License: GPL-2.0-only
 Group: Development/Other
 
 Source: %name-%version.tar
 
 %define supported_arches %ix86 x86_64 ppc64le aarch64 armh
 
+%ifarch %supported_arches
+# Try to load un-def kernel this way to avoid "forbidden dependencies"
+# from sisyphus_check
+Requires: kernel > 5.0
+Requires: %name-run = %EVR
+%endif
+
+%description
+%ifarch %supported_arches
+RPM helper to run QEMU inside hasher. This is mainly intended
+for %%check section to test software under better emulated root
+than fakeroot.
+
+This is similar to multiple vm scripts, virtme, vido, and eudyptula-boot.
+%else
+This package is a stub instead of RPM helper to run QEMU inside hasher
+on supported architectures (this one (%_arch) is unsupported).
+%endif
+
+%package run
+Summary: vm-run scripts only
+Group: Development/Other
 %ifarch %supported_arches
 # = QEMU supported arches =
 # Other arches will get a stub which will always return success
@@ -28,13 +50,8 @@ Source: %name-%version.tar
 Requires: /proc
 Requires: /dev/kvm
 
-# Try to load un-def kernel this way to avoid "forbidden dependencies"
-# from sisyphus_check
-Requires: kernel > 5.0
-
 Requires: make-initrd
 Requires: mount
-%endif
 
 %ifarch %ix86 x86_64
 Requires: qemu-system-x86-core
@@ -49,14 +66,18 @@ Requires: qemu-system-aarch64-core
 Requires: qemu-system-arm-core
 %endif
 
-%description
+%endif
+
+%description run
+%ifarch %supported_arches
 RPM helper to run QEMU inside hasher. This is mainly intended
 for %%check section to test software under better emulated root
 than fakeroot.
 
 This is similar to multiple vm scripts, virtme, vido, and eudyptula-boot.
-%ifnarch %supported_arches
 
+This package is vm-run scripts only (without requirement on the kernel).
+%else
 This package is a stub instead of RPM helper to run QEMU inside hasher
 on supported architectures (this one (%_arch) is unsupported).
 %endif
@@ -83,13 +104,15 @@ install -D -p -m 0755 initrd-init %buildroot%_libexecdir/%name/sbin/init-bin
 install -D -p -m 0755 config.mk   %buildroot%_libexecdir/%name/config.mk
 %endif
 
-%pre
+%pre run
 # Only allow to install inside of hasher.
 [ -d /.host -a -d /.in -a -d /.out ]
 
+%files
+
 %files checkinstall
 
-%files
+%files run
 %_bindir/vm-run
 
 %ifarch %supported_arches
@@ -113,6 +136,7 @@ rm -rf /tmp/make-initrd.*
   find /lib/modules -type f,d -print0
 ) | xargs -0r chmod a+rX
 
+%post run
 # Required in case of --udevd option to vm-run
 mkdir -p /run/udev
 chmod a+twx /run/udev
