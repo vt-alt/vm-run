@@ -1,0 +1,19 @@
+#!/bin/sh
+# filetrigger for newly installed kernels
+
+[ -d /.host -a -d /.in -a -d /.out ] || exit 0
+
+LC_ALL=C grep -Eqs '^/boot/(System.map|config|vmlinuz)-|^/lib/modules/' || exit 0
+
+# Create modules.dep.bin, modules.alias.bin
+ls /boot/vmlinuz-* \
+| while read KERN; do
+	KVER=${KERN#/boot/vmlinuz-}
+	if [ ! -s /lib/modules/$KVER/modules.dep.bin ]; then
+		echo "Running depmod for $KVER"
+		depmod "$KVER"
+	fi
+done
+
+# Fix permissions to boot the installed kernels
+find /boot /lib/modules -type f,d \! -perm -444 -print0 | xargs -0r chmod a+rX

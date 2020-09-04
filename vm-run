@@ -1,10 +1,12 @@
-#!/bin/bash -efu
-# SPDX-License-Identifier: GPL-2.0
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # vm-run: Run command under QEMU emulated root
 #
 # Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
 #
+
+set -efu
 
 # Save original env first
 SCRIPT=$(mktemp)
@@ -64,7 +66,7 @@ for opt do
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--) break ;;
-		-*) echo "Unknown option $opt $*"; usage ;;
+		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
 	esac
 done
@@ -78,7 +80,7 @@ fi
 # If we already have root just run the command
 if [ $(whoami) = root ]; then
 	exec "$@"
-	exit 1
+	exit
 fi
 
 # Signal to vm-init that we don't have tty on stdin,
@@ -161,7 +163,7 @@ case "$HOSTTYPE" in
 		QEMU=qemu-system-x86_64
 		;;
 	*)
-		echo "Error: architecture $HOSTTYPE is unknown"
+		echo "Error: architecture $HOSTTYPE is unknown." >&2
 		exit 1
 esac
 
@@ -183,10 +185,10 @@ if [ -w /dev/kvm ]; then
 fi
 
 if ! mountpoint -q /proc; then
-	echo "==========================================="
-	echo "Warning: /proc is not mounted              "
-	echo "try: hsh-shell --mountpoints=/proc,/dev/kvm"
-	echo "==========================================="
+	echo "===========================================" >&2
+	echo "Warning: /proc is not mounted              " >&2
+	echo "try: hsh-shell --mountpoints=/proc,/dev/kvm" >&2
+	echo "===========================================" >&2
 fi
 
 if [ -e /proc/meminfo ]; then
@@ -222,33 +224,110 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 	elif type ifconfig >/dev/null 2>&1; then
 		:
 	else
-		echo "Warning: To use share_network inside vm-run you may"
-		echo "  need to hsh-install iproute2 or net-tools"
+		echo "Warning: To use share_network inside vm-run you may" >&2
+		echo "  need to hsh-install iproute2 or net-tools" >&2
 	fi
 fi
 
-if [ "${KERNEL-}" ]; then
-	# Kernel version can be exact or match like std-def
-	if [ -e "$KERNEL" ]; then
-		INITRD=${KERNEL/vmlinuz/initrd}
-		INITRD=${INITRD%.img}.img
-	else
-		KERNEL=${KERNEL#/boot/}
-		KERNEL=${KERNEL#initrd-}
-		KERNEL=${KERNEL#vmlinuz-}
-		KERNEL=${KERNEL%.img}
-		if [ -e /boot/initrd-"$KERNEL".img ]; then
-			INITRD=/boot/initrd-"$KERNEL".img
+# Sorted by preference (%buildroot first) and mtime (newer first)
+list_kernels() {
+	(
+		set +ef
+		if [ -n "${RPM_BUILD_ROOT-}" ]; then
+			# Normal build, we know exact %buildroot location.
+			ls -t "$RPM_BUILD_ROOT"/boot/vmlinuz-*
 		else
-			INITRD=$(set +f; ls -ct /boot/initrd-* | fgrep -e "$KERNEL")
+			# hsh-shell, try to guess %buildroot.
+			ls -t /usr/src/tmp/*-buildroot/boot/vmlinuz-*
 		fi
-	fi
-elif [ -z "${INITRD-}" ]; then
-	# Find newest initrd
-	INITRD=$(set +f; ls -ct /boot/initrd-* | head -1)
+		ls -t /boot/vmlinuz-*
+	) 2>/dev/null
+}
+
+guess_kernel() {
+	local match=${1-}
+
+	# Better match first.
+	list_kernels | grep -s -m1 -e ".*/$match" -x && return
+	list_kernels | grep -s -m1 -e    "$match" -w && return
+	list_kernels | grep -s -m1 -e    "$match"    && return
+	return 0
+}
+
+if [ -f "${KERNEL-}" ]; then
+	KERN=$KERNEL
+else
+	KERN=$(guess_kernel "${KERNEL-}")
 fi
-KERNEL=${INITRD/initrd/vmlinuz}
-KERNEL=${KERNEL%.img}
+
+if [ ! -f "$KERN" ]; then
+	if [ -n "${KERNEL-}" ]; then
+		echo "Error: Cannot find the kernel matching '$KERNEL'." >&2
+	else
+		echo "Error: Cannot find a kernel, try to use '--kernel=' option." >&2
+	fi
+	if list_kernels | grep -q .; then
+		echo "  List of available kernels:" >&2
+		list_kernels | sed 's/^/\t/' >&2
+	else
+		echo "  No kernels found, try to install a kernel first." >&2
+	fi
+	exit 1
+fi
+KERNEL=$KERN
+unset KERN
+
+ROOT=${KERNEL%%/boot/*}
+if [ -n "$ROOT" ]; then
+	# Two spaces to defend against accidental injection, since
+	# command is '%q'-escaped and cannot contain consecutive spaces.
+	printf '#  MODPROBE_OPTIONS=%q\n' "--dirname=$ROOT" >> $SCRIPT
+fi
+
+# Generate initramfs.
+if [ ! -f "${INITRD-}" ]; then
+	# Kernel version.
+	KVER=${KERNEL##*/vmlinuz-}
+	if [ ! -d "$ROOT/lib/modules/$KVER" ]; then
+		echo "Error: Cannot find $ROOT/lib/modules/$KVER for your kernel." >&2
+		echo "       Please, install the kernel or make modules_install!"  >&2
+		exit 1
+	fi
+	if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ] &&
+	   [ -w "$ROOT/lib/modules/$KVER" ]; then
+		   ( set -x; /sbin/depmod ${ROOT:+-b $ROOT} $KVER )
+	fi
+	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
+	CPIO=$(mktemp -d)
+	MODULES="9p 9pnet_virtio virtio_pci"
+	if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
+		echo "Error: modprobe failure." >&2
+		if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
+			[ -w "$ROOT/lib/modules/$KVER/" ] && HELP= \
+				|| HELP=" under rooter"
+			echo "  Run 'depmod${ROOT:+ -b $ROOT} $KVER'$HELP." >&2
+		fi
+		exit 1
+	fi
+	while read skip f; do
+		bn=${f##*/}
+		un=${bn%.?z}
+		[ -e "$CPIO/$un" ] && continue
+		cp -au "$f" "$CPIO/"
+		case "$bn" in
+			*.gz) gzip -qd "$CPIO/$bn" ;;
+			*.xz) xz   -qd "$CPIO/$bn" ;;
+		esac
+		printf '%s\n' "$un" >&3
+	done < "$CPIO/modprobe.txt" \
+		3> "$CPIO/modules.conf"
+	cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
+	rm "$CPIO/modprobe.txt"
+	(cd "$CPIO"; find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
+	rm -rf "$CPIO"
+	unset CPIO MODULES KVER skip f bn un
+fi
+unset ROOT
 
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
@@ -276,6 +355,6 @@ if [ -s $SCRIPT.ret ]; then
 	read ret < $SCRIPT.ret
 	exit $ret
 else
-	echo "Error: no exit code is found, failure."
+	echo "Error: no exit code is found, failure." >&2
 	exit 1
 fi
