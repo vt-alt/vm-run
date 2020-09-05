@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.14
+Version: 1.15
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -168,6 +168,10 @@ vm-run --verbose uname
 vm-run --verbose --overlay=ext4 uname
 
 %changelog
+* Sat Sep 05 2020 Vitaly Chikunov <vt@altlinux.org> 1.15-alt1
+- Split into two packages, with kernel dependence and without it.
+- Remove dependence on make-initrd by generating own initramfs.
+
 * Mon Aug 17 2020 Vitaly Chikunov <vt@altlinux.org> 1.14-alt1
 - armh: Enable tcg support.
 
