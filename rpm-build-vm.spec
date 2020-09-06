@@ -24,14 +24,15 @@ Requires: kernel > 5.0
 Requires: %name-run = %EVR
 %endif
 
-%description
 %ifarch %supported_arches
+%description
 RPM helper to run QEMU inside hasher. This is mainly intended
 for %%check section to test software under better emulated root
 than fakeroot.
 
 This is similar to multiple vm scripts, virtme, vido, and eudyptula-boot.
 %else
+%description
 This package is a stub instead of RPM helper to run QEMU inside hasher
 on supported architectures (this one (%_arch) is unsupported).
 %endif
@@ -68,8 +69,8 @@ Requires: qemu-system-arm-core
 
 %endif
 
-%description run
 %ifarch %supported_arches
+%description run
 RPM helper to run QEMU inside hasher. This is mainly intended
 for %%check section to test software under better emulated root
 than fakeroot.
@@ -78,6 +79,7 @@ This is similar to multiple vm scripts, virtme, vido, and eudyptula-boot.
 
 This package is vm-run scripts only (without requirement on the kernel).
 %else
+%description run
 This package is a stub instead of RPM helper to run QEMU inside hasher
 on supported architectures (this one (%_arch) is unsupported).
 %endif
