@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # vm-init: actual init script
 #
@@ -25,7 +25,15 @@ SCRIPT=${SCRIPT%% *}
 eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
 export MODPROBE_OPTIONS
 
+# Save script if it's on /tmp before mounting tmpfs over it.
+case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
 V mount -t tmpfs tmpfs /tmp
+if [ -n "${SCRIPT_TEXT-}" ]; then
+       echo "$SCRIPT_TEXT" > "$SCRIPT"
+       chmod a+x "$SCRIPT"
+       unset SCRIPT_TEXT
+fi
+
 V mount -t tmpfs tmpfs /var/log
 install -g utmp -m660 /dev/null /var/log/btmp
 install -g utmp -m664 /dev/null /var/log/wtmp
@@ -167,6 +175,7 @@ setsid --ctty --wait $SCRIPT 0<>/dev/"$CONSOLE" 1>&0 2>&0
 RET=$?
 
 [ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
+case "$SCRIPT" in /tmp/*) umount $V -n --lazy /tmp;; esac
 echo $RET 2>/dev/null > $SCRIPT.ret ||
 	echo Exit code $RET is lost
 

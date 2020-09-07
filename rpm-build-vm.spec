@@ -164,8 +164,8 @@ chmod go-rwx /dev/kvm
 
 %pre checkinstall
 set -ex
-vm-run --verbose uname
-vm-run --verbose --overlay=ext4 uname
+vm-run --verbose uname -a
+vm-run --verbose --overlay=ext4 uname -a
 
 %changelog
 * Sat Sep 05 2020 Vitaly Chikunov <vt@altlinux.org> 1.15-alt1

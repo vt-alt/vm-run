@@ -78,7 +78,7 @@ if [ -z "$*" ]; then
 fi
 
 # If we already have root just run the command
-if [ $(whoami) = root ]; then
+if [ $(env - whoami) = root ]; then
 	exec "$@"
 	exit
 fi
