@@ -19,7 +19,7 @@ SCRIPT=$(mktemp)
 OPTS=
 APPEND=
 NOCMD=
-TIME=time
+type time >/dev/null 2>&1 && TIME=time || TIME=
 SBIN=
 VERBOSE=
 QUIET=quiet	# no boot messages
