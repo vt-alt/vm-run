@@ -313,7 +313,7 @@ if [ ! -f "${INITRD-}" ]; then
 		bn=${f##*/}
 		un=${bn%.?z}
 		[ -e "$CPIO/$un" ] && continue
-		cp -au "$f" "$CPIO/"
+		cp -au "$f" "$CPIO/" 2>/dev/null || continue
 		case "$bn" in
 			*.gz) gzip -qd "$CPIO/$bn" ;;
 			*.xz) xz   -qd "$CPIO/$bn" ;;
