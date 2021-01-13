@@ -167,8 +167,11 @@ chmod go-rwx /dev/kvm
 
 %pre checkinstall
 set -ex
-vm-run --verbose uname -a
-vm-run --verbose --overlay=ext4 uname -a
+# qemu in tcb mode can hang un-def-5.10 kernel on ppc64 if smp>1 on "smp:
+# Bringing up secondary CPUs" message.
+ls -l /dev/kvm
+timeout 300 vm-run --verbose uname -a
+timeout 300 vm-run --verbose --overlay=ext4 uname -a
 
 %changelog
 * Sun Jan 10 2021 Vitaly Chikunov <vt@altlinux.org> 1.19-alt1
