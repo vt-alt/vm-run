@@ -167,7 +167,7 @@ chmod go-rwx /dev/kvm
 
 %pre checkinstall
 set -ex
-# qemu in tcb mode can hang un-def-5.10 kernel on ppc64 if smp>1 on "smp:
+# qemu in tcg mode can hang un-def-5.10 kernel on ppc64 if smp>1 on "smp:
 # Bringing up secondary CPUs" message.
 ls -l /dev/kvm
 timeout 300 vm-run --verbose uname -a
