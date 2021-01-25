@@ -332,22 +332,31 @@ unset ROOT
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
 (
- set +f # Enable filename globbing
- test "$NOCMD" || set -x
- $TIME \
- $QEMU \
-	$DEF \
-	-nodefaults \
-	-nographic \
-	-no-reboot \
-	-fsdev local,id=root,path=/,security_model=none,multidevs=remap \
-	-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
-	-device virtio-rng-pci \
-	-serial mon:stdio \
-	-kernel $KERNEL \
-	-initrd $INITRD \
-	$OPTS \
-	-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
+	set +f # Enable filename globbing
+	if [ ! -t 0 ]; then
+		# More debugging info on qemu crashes.
+		VM_RUN_LIBSEGFAULT=$(echo /usr/lib*/libSegFault.so)
+		if [ -f "$VM_RUN_LIBSEGFAULT" ]; then
+			LD_PRELOAD=${LD_PRELOAD:+${LD_PRELOAD}:}$VM_RUN_LIBSEGFAULT
+			SEGFAULT_USE_ALTSTACK=1
+			export LD_PRELOAD SEGFAULT_USE_ALTSTACK
+		fi
+	fi
+	test "$NOCMD" || set -x
+	$TIME \
+	$QEMU \
+		$DEF \
+		-nodefaults \
+		-nographic \
+		-no-reboot \
+		-fsdev local,id=root,path=/,security_model=none,multidevs=remap \
+		-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
+		-device virtio-rng-pci \
+		-serial mon:stdio \
+		-kernel $KERNEL \
+		-initrd $INITRD \
+		$OPTS \
+		-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
 )
 
 # Temporary script is not deleted intentionally.
