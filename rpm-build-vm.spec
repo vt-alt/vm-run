@@ -4,8 +4,8 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.19
-Release: alt2
+Version: 1.20
+Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -174,6 +174,9 @@ timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 
 %changelog
+* Mon Jan 25 2021 Vitaly Chikunov <vt@altlinux.org> 1.20-alt1
+- Try to catch accidental qemu crashes.
+
 * Wed Jan 13 2021 Vitaly Chikunov <vt@altlinux.org> 1.19-alt2
 - spec: Add timeout to checkinstall tests.
 
