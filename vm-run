@@ -42,6 +42,7 @@ usage() {
 	echo "    --qemu='...'     pass additional options to qemu"
 	echo "    --append='...'   append to kernel cmdline"
 	echo "    --drive=         shortcut to pass '-drive file=' to qemu"
+	echo "    --fat=dir        shortcut to pass dir as rw FAT partition"
 	echo "    --overlay=fs[,size=][:path]"
 	echo "                     auto create overlay filesystem over path"
 	echo "    --bios=          Use particular firmware (ex. uefi)"
@@ -69,6 +70,7 @@ for opt do
 		--qemu=*)    OPTS+=" ${opt#*=}" ;;
 		--append=*)  APPEND+=" ${opt#*=}" ;;
 		--drive=*)   OPTS+=" -drive file=${opt#*=}" ;;
+		--fat=*)     OPTS+=" -drive format=raw,file=fat:rw:${opt#*=}" ;;
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
 		--uefi)	     BIOS=uefi ;;
 		--securebo*) BIOS=secureboot ;;
