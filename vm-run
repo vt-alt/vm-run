@@ -43,7 +43,7 @@ usage() {
 	echo "                     auto create overlay filesystem over path"
 	echo "    --mem=           pass '-m ...' to qemu (memory size)"
 	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
-	echo "    --kernel=        kernel version to use"
+	echo "    --kernel=        kernel version to use (--kernels to list)"
 	echo "    --               no options after this marker"
 	echo "    command...       will be eval'ed on the target"
 	exit 1
@@ -65,6 +65,7 @@ for opt do
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
+		--kernel*)   KERNEL= ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -244,6 +245,15 @@ list_kernels() {
 	) 2>/dev/null
 }
 
+list_kernels_ui() {
+	if list_kernels | grep -q .; then
+		echo "  List of available kernels:" >&2
+		list_kernels | sed 's/^/\t/' >&2
+	else
+		echo "  No kernels found, try to install a kernel first." >&2
+	fi
+}
+
 guess_kernel() {
 	local match=${1-}
 
@@ -256,8 +266,16 @@ guess_kernel() {
 
 if [ -f "${KERNEL-}" ]; then
 	KERN=$KERNEL
+elif [ ! -v KERNEL ]; then
+	# No --kernel= option.
+	KERN=$(guess_kernel)
+elif [ -n "$KERNEL" ]; then
+	# Non-empty --kernel= option.
+	KERN=$(guess_kernel "$KERNEL")
 else
-	KERN=$(guess_kernel "${KERNEL-}")
+	# Empty --kernel= option for easy listing.
+	list_kernels_ui
+	exit 1
 fi
 
 if [ ! -f "$KERN" ]; then
@@ -266,12 +284,7 @@ if [ ! -f "$KERN" ]; then
 	else
 		echo "Error: Cannot find a kernel, try to use '--kernel=' option." >&2
 	fi
-	if list_kernels | grep -q .; then
-		echo "  List of available kernels:" >&2
-		list_kernels | sed 's/^/\t/' >&2
-	else
-		echo "  No kernels found, try to install a kernel first." >&2
-	fi
+	list_kernels_ui
 	exit 1
 fi
 KERNEL=$KERN
