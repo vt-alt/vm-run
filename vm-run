@@ -27,6 +27,7 @@ DEF=
 MAXMEM=
 MAXCPU=
 DEPMOD=
+BIOS=
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -42,6 +43,9 @@ usage() {
 	echo "    --drive=         shortcut to pass '-drive file=' to qemu"
 	echo "    --overlay=fs[,size=][:path]"
 	echo "                     auto create overlay filesystem over path"
+	echo "    --bios=          Use particular firmware (ex. uefi)"
+	echo "    --uefi           Use OVMF UEFI firmware (alias --bios=uefi)"
+	echo "    --secureboot     Use OVMF SecureBoot fw (alias --bios=secureboot)"
 	echo "    --mem=           pass '-m ...' to qemu (memory size)"
 	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
 	echo "    --kernel=        kernel version to use (--kernels to list)"
@@ -64,6 +68,9 @@ for opt do
 		--append=*)  APPEND+=" ${opt#*=}" ;;
 		--drive=*)   OPTS+=" -drive file=${opt#*=}" ;;
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
+		--uefi)	     BIOS=uefi ;;
+		--securebo*) BIOS=secureboot ;;
+		--bios=*)    BIOS="${opt#*=}" ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
@@ -145,6 +152,8 @@ case "$HOSTTYPE" in
 		# to sane big values
 		MAXMEM=4096
 		MAXCPU=8
+		EDK2=/usr/share/AAVMF
+		EFI_CODE=QEMU_EFI.fd
 		;;
 	armh)
 		PACKAGE=qemu-system-arm-core
@@ -165,6 +174,9 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-x86_64
+		EDK2=/usr/share/OVMF
+		EFI_CODE=OVMF_CODE.fd
+		SB_PFLASH="OVMF_CODE.secboot.fd OVMF_VARS.secboot.fd"
 		;;
 	*)
 		echo "Error: architecture $HOSTTYPE is unknown." >&2
@@ -176,8 +188,30 @@ case "$HOSTTYPE" in
 		APPEND+=" no_timer_check" ;;
 esac
 
-# Quirks
-if [ -e /usr/share/qemu/bios.bin ]; then
+# Set up BIOS.
+if [ "$BIOS" = "uefi" ]; then
+	if [ -n "${EFI_CODE-}" ]; then
+		OPTS+=" -bios $EDK2/$EFI_CODE"
+	else
+		echo "Error: UEFI is not available for this platform." >&2
+		exit 1
+	fi
+elif [ "$BIOS" = "secureboot" ]; then
+	if [ -n " ${SB_PFLASH-}" ]; then
+		OPTS+=" -global ICH9-LPC.disable_s3=1 -M q35,smm=on"
+		OPTS+=" -global driver=cfi.pflash01,property=secure,value=on"
+		for f in ${SB_PFLASH-}; do
+			OPTS+=" -drive file=$EDK2/$f,if=pflash,format=raw,readonly"
+		done
+	else
+		echo "Error: Secure Boot is not available for this platform." >&2
+		exit 1
+	fi
+elif [ -f "/usr/share/qemu/$BIOS" ]; then
+	OPTS+=" -bios $BIOS"
+elif [ -n "$BIOS" ]; then
+	OPTS+=" -bios $BIOS"
+elif [ -e /usr/share/qemu/bios.bin ]; then
 	# x86 BIOS that doesn't clear screen unlike default bios-256k.bin
 	OPTS+=" -bios bios.bin"
 fi
