@@ -107,6 +107,10 @@ Run checkinstall tests for vm-run.
 CFLAGS="%optflags" make
 %endif
 
+bash -n vm-run
+bash -n vm-init
+bash -n filetrigger
+
 %install
 %ifnarch %supported_arches
 install -D -p -m 0755 vm-run-stub %buildroot%_bindir/vm-run
