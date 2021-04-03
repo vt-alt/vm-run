@@ -79,6 +79,14 @@ for opt do
 		--bios=*)    BIOS="${opt#*=}" ;;
 		--tcg)	     KVM= ;;
 		--microvm)   VIRTIOBUS=device OPTS+=" -M microvm" BIOS=microvm ;;
+		--machine=*) OPTS+=" -machine ${opt#*=}" ;;
+		--global=*)  OPTS+=" -global ${opt#*=}" ;;
+		--object=*)  OPTS+=" -object ${opt#*=}" ;;
+		--device=*)  OPTS+=" -device ${opt#*=}" ;;
+		--drive=*)   OPTS+=" -drive ${opt#*=}" ;;
+		--blockdev=*)OPTS+=" -blockdev ${opt#*=}" ;;
+		--netdev=*)  OPTS+=" -netdev ${opt#*=}" ;;
+		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
