@@ -29,6 +29,7 @@ MAXCPU=
 DEPMOD=
 BIOS=
 KVM=yes		# try to use kvm by default
+VIRTIOBUS=pci	# virtio bus to use
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -48,6 +49,7 @@ usage() {
 	echo "    --bios=          Use particular firmware (ex. uefi)"
 	echo "    --uefi           Use OVMF UEFI firmware (alias --bios=uefi)"
 	echo "    --secureboot     Use OVMF SecureBoot fw (alias --bios=secureboot)"
+	echo "    --microvm        Use microvm machine"
 	echo "    --tcg            Do not try to enable KVM"
 	echo "    --mem=           pass '-m ...' to qemu (memory size)"
 	echo "    --cpu=           pass '-smp ...' to qemu (cpus)"
@@ -76,6 +78,7 @@ for opt do
 		--securebo*) BIOS=secureboot ;;
 		--bios=*)    BIOS="${opt#*=}" ;;
 		--tcg)	     KVM= ;;
+		--microvm)   VIRTIOBUS=device OPTS+=" -M microvm" BIOS=microvm ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
@@ -212,6 +215,8 @@ elif [ "$BIOS" = "secureboot" ]; then
 		echo "Error: Secure Boot is not available for this platform." >&2
 		exit 1
 	fi
+elif [ "$BIOS" = "microvm" ]; then
+	OPTS+=" -bios bios-microvm.bin"
 elif [ -f "/usr/share/qemu/$BIOS" ]; then
 	OPTS+=" -bios $BIOS"
 elif [ -n "$BIOS" ]; then
@@ -370,7 +375,8 @@ if [ ! -f "${INITRD-}" ]; then
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
 	CPIO=$(mktemp -d)
-	MODULES="9p 9pnet_virtio virtio_pci"
+	MODULES="9p 9pnet_virtio "
+	[ "$VIRTIOBUS" = "pci" ] && MODULES+="virtio_pci" || MODULES+="virtio_mmio"
 	if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
 		echo "Error: modprobe failure." >&2
 		if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
@@ -421,8 +427,8 @@ unset ROOT
 		-nographic \
 		-no-reboot \
 		-fsdev local,id=root,path=/,security_model=none,multidevs=remap \
-		-device virtio-9p-pci,fsdev=root,mount_tag=/dev/root \
-		-device virtio-rng-pci \
+		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=/dev/root \
+		-device virtio-rng-$VIRTIOBUS \
 		-serial mon:stdio \
 		-kernel $KERNEL \
 		-initrd $INITRD \
