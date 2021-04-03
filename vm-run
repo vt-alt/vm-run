@@ -238,11 +238,11 @@ fi
 if [ -n "$KVM" ]; then
 	if [ -w /dev/kvm ]; then
 		# Fallback to TCG in case of something.
-		OPTS+=" -M accel=kvm:tcg"
+		DEF+=" -M accel=kvm:tcg"
 	fi
 else
 	# Forcefully disable KVM.
-	OPTS+=" -M accel=tcg"
+	DEF+=" -M accel=tcg"
 fi
 
 if ! mountpoint -q /proc; then
