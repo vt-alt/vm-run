@@ -54,6 +54,7 @@ V mount -t securityfs securityfs /sys/kernel/security
 mkdir -p /dev/pts /dev/shm
 V mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
 V mount -t tmpfs -o mode=1777,size=1M,noexec,nosuid,nodev tmpfs /dev/shm
+V mount -t tmpfs -o mode=755,nodev,nosuid,strictatime tmpfs /run
 
 V ip link set dev lo up 2>/dev/null
 
