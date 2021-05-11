@@ -51,7 +51,7 @@ V mount -t configfs   configfs   /sys/kernel/config
 V mount -t debugfs    debugfs    /sys/kernel/debug
 V mount -t securityfs securityfs /sys/kernel/security
 
-mkdir -p /dev/pts /dev/shm
+mkdir -p /dev/pts /dev/shm /dev/disk/by-id /dev/disk/by-path /dev/disk/by-uuid
 V mount -t devpts -o gid=tty,mode=620,noexec,nosuid devpts /dev/pts
 V mount -t tmpfs -o mode=1777,size=1M,noexec,nosuid,nodev tmpfs /dev/shm
 V mount -t tmpfs -o mode=755,nodev,nosuid,strictatime tmpfs /run
