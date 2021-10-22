@@ -316,7 +316,7 @@ if [ "$NPROC" -gt 1 ]; then
 	if [ "$MAXCPU" ] && [ "$NPROC" -gt "$MAXCPU" ]; then
 		NPROC=$MAXCPU
 	fi
-	DEF+=" -smp $NPROC"
+	DEF+=" -smp cores=$NPROC"
 fi
 
 if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
