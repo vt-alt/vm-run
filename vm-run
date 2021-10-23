@@ -90,7 +90,7 @@ for opt do
 		--netdev=*)  OPTS+=" -netdev ${opt#*=}" ;;
 		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
-		--cpu=*)     OPTS+=" -smp ${opt#*=}" ;;
+		--cpu=*)     NPROC="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
@@ -311,7 +311,7 @@ if [ $M -ge 256 ]; then
         DEF+=" -m ${M}M"
 fi
 
-NPROC=$(nproc)
+[ -v NPROC ] || NPROC=$(nproc)
 if [ "$NPROC" -gt 1 ]; then
 	if [ "$MAXCPU" ] && [ "$NPROC" -gt "$MAXCPU" ]; then
 		NPROC=$MAXCPU
