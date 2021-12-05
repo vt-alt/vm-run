@@ -123,6 +123,7 @@ install -D -p -m 0755 vm-init     %buildroot%_libexecdir/vm-run/vm-init
 install -D -p -m 0755 initrd-init %buildroot%_libexecdir/vm-run/initrd-init
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
 %endif
+install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 
 %pre run
 # Only allow to install inside of hasher.
@@ -137,6 +138,7 @@ install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
 
 %files run
 %_bindir/vm-run
+%_bindir/vm-resize
 
 %ifarch %supported_arches
 %_libexecdir/vm-run

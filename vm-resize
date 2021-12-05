@@ -1,0 +1,19 @@
+#!/bin/bash
+# resize(1) trick from eudyptula-boot
+
+previous=$(stty -g)
+stty raw -echo min 0 time 5
+printf '\0337\033[r\033[999;999H\033[6n\0338'
+# save cursor position
+# set scroll region to default
+# move cursor to 999 999
+# report cursor position
+# restore cursor position
+IFS='[;R' read -r _ rows cols _
+stty "$previous"
+if [ "$cols" -gt 0 ] && [ "$rows" -gt 0 ]; then
+	set -x
+	stty cols "$cols" rows "$rows"
+else
+	echo "Terminal size is unknown"
+fi
