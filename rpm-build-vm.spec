@@ -71,6 +71,8 @@ Requires: qemu-system-aarch64-core
 %ifarch armh
 # No KVM support in the kernel for this arch.
 Requires: qemu-system-arm-core
+# AArch64-native qemu-system-aarch64 binary to use KVM.
+Requires: qemu-system-aarch64-core-bundle
 %endif
 
 %endif

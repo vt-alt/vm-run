@@ -130,7 +130,12 @@ chmod a+rx $SCRIPT
 
 kvm_ok() {
 	if [ -c /dev/kvm -a -w /dev/kvm ]; then
-		true < /dev/kvm
+		if [ "$HOSTTYPE" = "aarch32" ] &&
+			[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ]; then
+			/usr/bin/qemu-system-aarch64-bundle-kvm-ok
+		else
+			true < /dev/kvm
+		fi
 	else
 		false
 	fi 2>/dev/null
@@ -165,6 +170,14 @@ ppc_opts() {
 	fi
 }
 
+# Special case for aarch64 host running in aarch32 personality.
+if [ "$HOSTTYPE" = "armh" ] &&
+	kvm_need &&
+	[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ] &&
+	/usr/bin/qemu-system-aarch64-bundle-kvm-ok; then
+	HOSTTYPE=aarch32
+fi
+
 case "$HOSTTYPE" in
 	powerpc64le)
 		PACKAGE=qemu-system-ppc-core
@@ -187,6 +200,15 @@ case "$HOSTTYPE" in
 		MAXCPU=8
 		EDK2=/usr/share/AAVMF
 		EFI_CODE=QEMU_EFI.fd
+		;;
+	aarch32)
+		PACKAGE=qemu-system-aarch64-bundle-core
+		CONSOLE=ttyAMA0
+		QEMU=qemu-system-aarch64-bundle
+		OPTS+=" -M virt,highmem=off -cpu host,aarch64=off"
+		APPEND+=" watchdog_thresh=60"
+		MAXMEM=3072
+		MAXCPU=6
 		;;
 	armh)
 		PACKAGE=qemu-system-arm-core
