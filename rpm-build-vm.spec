@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.26
+Version: 1.27
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -97,6 +97,7 @@ Summary: Checkinstall for vm-run
 Group: Development/Other
 BuildArch: noarch
 Requires(pre): %name = %EVR
+Requires(pre): time
 
 %description checkinstall
 Run checkinstall tests for vm-run.
@@ -113,6 +114,8 @@ CFLAGS="%optflags" make
 %endif
 
 bash -n vm-run
+bash -n vm-resize
+bash -n vm-run-stub
 bash -n vm-init
 bash -n filetrigger
 
@@ -182,6 +185,7 @@ set -ex
 # Bringing up secondary CPUs" message.
 %ifarch %supported_arches
 ls -l /dev/kvm
+set | grep ^LD_
 %endif
 timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
@@ -194,6 +198,9 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Thu Dec 16 2021 Vitaly Chikunov <vt@altlinux.org> 1.27-alt1
+- Added KVM support for aarch32.
+
 * Sun Dec 05 2021 Vitaly Chikunov <vt@altlinux.org> 1.26-alt1
 - Add vm-resize tool (simpler version of resize(1)).
 
