@@ -30,6 +30,7 @@ DEPMOD=
 BIOS=
 KVM=try		# try to use kvm by default
 VIRTIOBUS=pci	# virtio bus to use
+ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -131,8 +132,8 @@ chmod a+rx $SCRIPT
 kvm_ok() {
 	if [ -c /dev/kvm -a -w /dev/kvm ]; then
 		if [ "$HOSTTYPE" = "aarch32" ] &&
-			[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ]; then
-			/usr/bin/qemu-system-aarch64-bundle-kvm-ok
+			[ -x $ARMH_KVM_OK ]; then
+			$ARMH_KVM_OK
 		else
 			true < /dev/kvm
 		fi
@@ -173,8 +174,8 @@ ppc_opts() {
 # Special case for aarch64 host running in aarch32 personality.
 if [ "$HOSTTYPE" = "armh" ] &&
 	kvm_need &&
-	[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ] &&
-	/usr/bin/qemu-system-aarch64-bundle-kvm-ok; then
+	[ -x $ARMH_KVM_OK ] &&
+	$ARMH_KVM_OK; then
 	HOSTTYPE=aarch32
 fi
 
