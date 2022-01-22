@@ -170,13 +170,6 @@ chmod a+twx /mnt
 
 # Allow user creation (for openssh)
 chmod a+r /etc/login.defs
-
-%ifarch armh
-# Workaround to KVM not working on armh: signal to scripts that we don't have
-# kvm. This will work on normal build, but will be cleared on hsh-shell, that
-# will not produce failure though, just more warnings from qemu.
-chmod go-rwx /dev/kvm
-%endif
 %endif
 
 %pre checkinstall
@@ -190,10 +183,9 @@ set | grep ^LD_
 timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 
-%ifarch %ix86 x86_64 ppc64le aarch64
+%ifarch %ix86 x86_64 ppc64le aarch64 armh
 %check
 # Verify availability of KVM in girar & beehiver.
-# armh is intentionally excluded from the test.
 ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
