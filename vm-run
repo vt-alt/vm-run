@@ -482,6 +482,7 @@ unset ROOT
 # -device virtio-rng-pci  for virtio-rng
 (
 	set +f # Enable filename globbing
+	ulimit -c unlimited
 	if [ ! -t 0 ]; then
 		# More debugging info on qemu crashes.
 		VM_RUN_LIBSEGFAULT=$(echo /usr/lib*/libSegFault.so)
