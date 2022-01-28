@@ -478,6 +478,26 @@ if [ ! -f "${INITRD-}" ]; then
 fi
 unset ROOT
 
+# QEMU Monitor is available (through character backend multiplexer), keys:
+#   C-a h    print this help
+#   C-a x    exit emulator
+#   C-a s    save disk data back to file (if -snapshot)
+#   C-a t    toggle console timestamps
+#   C-a b    send break (magic sysrq)
+#   C-a c    switch between console and monitor
+#   C-a C-a  sends C-a
+#
+# QEMU Monitor help: https://qemu-project.gitlab.io/qemu/system/monitor.html
+#
+# For example, to send Magic-SysRq-Help press: C-a b h
+# or using monitor command: sendkey alt-sysrq-h
+#   sysrq: HELP : loglevel(0-9) reboot(b) crash(c) terminate-all-tasks(e)
+#   memory-full-oom-kill(f) kill-all-tasks(i) thaw-filesystems(j) sak(k)
+#   show-backtrace-all-active-cpus(l) show-memory-usage(m) nice-all-RT-tasks(n)
+#   poweroff(o) show-registers(p) show-all-timers(q) unraw(r) sync(s)
+#   show-task-states(t) unmount(u) show-blocked-tasks(w) dump-ftrace-buffer(z)
+#
+
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
 (
