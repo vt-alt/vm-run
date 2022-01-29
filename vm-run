@@ -31,6 +31,7 @@ BIOS=
 KVM=try		# try to use kvm by default
 VIRTIOBUS=pci	# virtio bus to use
 ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
+SANDBOX=on,spawn=deny
 
 usage() {
 	echo "Usage: $0 [options] command..."
@@ -90,6 +91,7 @@ for opt do
 		--blockdev=*)OPTS+=" -blockdev ${opt#*=}" ;;
 		--netdev=*)  OPTS+=" -netdev ${opt#*=}" ;;
 		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
+		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     NPROC="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
@@ -340,6 +342,11 @@ if [ "$NPROC" -gt 1 ]; then
 		NPROC=$MAXCPU
 	fi
 	DEF+=" -smp cores=$NPROC"
+fi
+
+# Enable sandbox
+if [ -n "$SANDBOX" ] && [ "$SANDBOX" != "off" ]; then
+	OPTS="-sandbox $SANDBOX $OPTS"
 fi
 
 if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
