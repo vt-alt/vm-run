@@ -74,10 +74,8 @@ V modprobe virtio-rng
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then
 	rm $tmp
 else
-	echo "***************************************************"
-	echo "*  Error: Impossible to create files in /usr/src  *"
-	echo "*         Exit code from qemu cmd will be lost!   *"
-	echo "***************************************************"
+	echo "  Error: Impossible to create files in /usr/src"
+	echo "         Exit code from the command will be lost!"
 fi
 
 # Prepare network

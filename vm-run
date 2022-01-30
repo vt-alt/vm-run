@@ -312,10 +312,8 @@ fi
 unset KVM
 
 if ! mountpoint -q /proc; then
-	echo "===========================================" >&2
-	echo "Warning: /proc is not mounted              " >&2
-	echo "try: hsh-shell --mountpoints=/proc,/dev/kvm" >&2
-	echo "===========================================" >&2
+	echo >&2 "  Warning: /proc is not mounted!"
+	echo >&2 "  Try to enter hasher with: hsh-shell --mountpoints=/proc,/dev/kvm"
 fi
 
 if [ -e /proc/meminfo ]; then
@@ -516,6 +514,7 @@ unset ROOT
 #   show-task-states(t) unmount(u) show-blocked-tasks(w) dump-ftrace-buffer(z)
 #
 
+set +e
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
 (
@@ -548,12 +547,26 @@ unset ROOT
 		$OPTS \
 		-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
 )
+declare -i ret=$?
+set -e
+if [ $ret -ge 132 -a $ret -le 159 ]; then
+	echo >&2 "  NOTICE: This is crash of $QEMU, not of the Linux kernel!"
+	if grep -sq systemd-coredump /proc/sys/kernel/core_pattern; then
+		echo >&2 "  NOTICE: Perhaps, issue 'coredumpctl info' for details."
+	fi
+fi
+if [ $ret -gt 0 ]; then
+	# Exit due to qemu reasons.
+	exit $ret
+fi
 
 # Temporary script is not deleted intentionally.
 if [ -s $SCRIPT.ret ]; then
+	# Exit due to script reasons.
 	read ret < $SCRIPT.ret
 	exit $ret
 else
-	echo "Error: no exit code is found, failure." >&2
+	# Possible kernel crash or C-a x
+	echo "  Error: no exit code is found, failure." >&2
 	exit 1
 fi
