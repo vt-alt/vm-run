@@ -428,6 +428,16 @@ if [ -n "$ROOT" ]; then
 	printf '#  MODPROBE_OPTIONS=%q\n' "--dirname=$ROOT" >> $SCRIPT
 fi
 
+cleanup_depmod() {
+	if [ -v TMP_DEPMOD -a -e "$TMP_DEPMOD" ]; then
+		[ -n "$VERBOSE" ] && echo >&2 "Undoing temporary depmod."
+		tar xf "$TMP_DEPMOD" -C / 2>/dev/null
+		rm "$TMP_DEPMOD"
+		unset TMP_DEPMOD
+	fi
+	exit "$@"
+}
+
 # Generate initramfs.
 if [ ! -f "${INITRD-}" ]; then
 	# Kernel version.
@@ -440,12 +450,13 @@ if [ ! -f "${INITRD-}" ]; then
 	if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
 		if [ -w "$ROOT/lib/modules/$KVER" ]; then
 			if [ -z "$DEPMOD" ] && [[ "$ROOT" =~ buildroot ]]; then
-				echo "  Run 'depmod -b $ROOT $KVER'" >&2
-				echo "  or start vm-run with '--depmod' option for automatic depmod." >&2
-				exit 1
-			else
-				( set -x; /sbin/depmod ${ROOT:+-b $ROOT} $KVER )
+				[ -n "$VERBOSE" ] && echo >&2 "Running temporary depmod (will undo later)."
+				TMP_DEPMOD=".tmp-depmod-$$.tgz"
+				trap "cleanup_depmod $?" EXIT
+				(set +f;
+				tar zcf $TMP_DEPMOD "$ROOT/lib/modules/$KVER"/modules.* 2>/dev/null)
 			fi
+			( set -x; /sbin/depmod ${ROOT:+-b $ROOT} $KVER )
 		else
 			echo "Error: No valid 'modules.dep.bin' in $ROOT/lib/modules/$KVER"  >&2
 			echo "       which is also not writable directory. As a result 'modprobe' will not work!"  >&2
