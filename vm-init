@@ -3,7 +3,7 @@
 #
 # vm-init: actual init script
 #
-# Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
+# Copyright (C) 2019-2022 Vitaly Chikunov <vt@altlinux.org>
 #
 
 [ $$ != 1 ] && exit 1
