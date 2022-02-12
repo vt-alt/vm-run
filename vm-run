@@ -363,13 +363,20 @@ fi
 list_kernels() {
 	(
 		set +ef
-		if [ -n "${RPM_BUILD_ROOT-}" ]; then
-			# Normal build, we know exact %buildroot location.
-			ls -t "$RPM_BUILD_ROOT"/boot/vmlinu[xz]-*
-		else
-			# hsh-shell, try to guess %buildroot.
-			ls -t /usr/src/tmp/*-buildroot/boot/vmlinu[xz]-*
-		fi
+		# Installed kernels have highest priority.
+		ls -t ${RPM_BUILD_ROOT-/usr/src/tmp/*-buildroot}/boot/vmlinu[xz]-*
+
+		# Just built kernels in build dir have medium priority.
+		builddir=${RPM_BUILD_DIR-/usr/src/RPM/BUILD}
+		kbuilddir=$(find "$builddir" -depth -maxdepth 3 -type f -name MAINTAINERS -print -quit)
+		kbuilddir=${kbuilddir%/*}
+		KBZ=$(find $kbuilddir/arch/*/boot -name '*Image' -type f)
+		# Raw vmlinux frequently do not work, with error:
+		# qemu-system-x86_64: Error loading uncompressed kernel without PVH ELF Note
+		KBD=$(find $kbuilddir -depth -maxdepth 3 -type f -name vmlinux)
+		ls -t $KBD $KBZ
+
+		# Kernels from packages have lowest priority.
 		ls -t /boot/vmlinu[xz]-*
 	) 2>/dev/null
 }
@@ -394,7 +401,7 @@ guess_kernel() {
 }
 
 if [ -f "${KERNEL-}" ]; then
-	KERN=$KERNEL
+	KERN=$(realpath $KERNEL)
 elif [ ! -v KERNEL ]; then
 	# No --kernel= option.
 	KERN=$(guess_kernel)
@@ -438,12 +445,30 @@ cleanup_depmod() {
 
 # Generate initramfs.
 if [ ! -f "${INITRD-}" ]; then
-	# Kernel version.
-	KVER=${KERNEL##*/vmlinu[xz]-}
-	if [ ! -d "$ROOT/lib/modules/$KVER" ]; then
-		echo "Error: Cannot find $ROOT/lib/modules/$KVER for your kernel." >&2
-		echo "       Please, install the kernel or make modules_install!"  >&2
-		exit 1
+	# For kernel in build dir.
+	if [ -z "${KERNEL##/usr/src/RPM/BUILD/*}" ]; then
+		ROOT=${TMPDIR-/tmp}
+		KSRC=${KERNEL%/*}
+		KSRC=${KSRC%/arch/*}
+		cd $KSRC
+		unset KSRC
+		# Override bogus MAKEFLAGS options (such as `-w`).
+		KVER=$(MAKEFLAGS=-s make kernelrelease | tail -1)
+		mkdir -p "$ROOT/lib/modules"
+		if [ "$(readlink "$ROOT/lib/modules/$KVER")" != "$PWD" ]; then
+			( set -x; ln -snf "$PWD" "$ROOT/lib/modules/$KVER" )
+		fi
+		( set -x; /sbin/depmod -b "$ROOT" "$KVER" )
+		cd $OLDPWD
+		printf '#  MODPROBE_OPTIONS=%q\n' "--dirname=$ROOT" >> $SCRIPT
+	else
+		# Kernel version.
+		KVER=${KERNEL##*/vmlinu[xz]-}
+		if [ ! -d "$ROOT/lib/modules/$KVER" ]; then
+			echo "Error: Cannot find $ROOT/lib/modules/$KVER for your kernel." >&2
+			echo "       Please, install the kernel or make modules_install!"  >&2
+			exit 1
+		fi
 	fi
 	if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
 		if [ -w "$ROOT/lib/modules/$KVER" ]; then
