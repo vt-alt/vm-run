@@ -12,8 +12,8 @@ printf '\0337\033[r\033[999;999H\033[6n\0338'
 IFS='[;R' read -r _ rows cols _
 stty "$previous"
 if [ "$cols" -gt 0 ] && [ "$rows" -gt 0 ]; then
-	set -x
+	[ "$1" = "-q" ] || set -x
 	stty cols "$cols" rows "$rows"
 else
-	echo "Terminal size is unknown"
+	echo >&2 "Terminal size is unknown (run vm-resize to try again.)"
 fi
