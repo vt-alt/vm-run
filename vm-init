@@ -141,6 +141,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 	if [ "$mnt" ]; then
 		mkdir -p $mnt/upper $mnt/work
 		: ${ovpath:=/usr/src}
+		V modprobe overlay
 		V mount $V -t overlay -olowerdir=$ovpath,upperdir=$mnt/upper,workdir=$mnt/work overlay $ovpath
 		UMOUNT=$ovpath
 	fi
