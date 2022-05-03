@@ -93,7 +93,7 @@ network_conf() {
 	fi
 }
 if [ $(wc -l < /proc/net/dev) -gt 3 ]; then
-	network_conf $(egrep -vw 'Inter-|face|lo:' /proc/net/dev | head -1 | cut -d: -f1 | tr -d ' ')
+	network_conf $(grep -E -vw 'Inter-|face|lo:' /proc/net/dev | head -1 | cut -d: -f1 | tr -d ' ')
 fi
 
 # Handle --overlay option
