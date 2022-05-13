@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 		xerrno(errno, "mkdir '%s'", newroot);
 
 	if (mount("/dev/root", newroot, "9p", 0,
-		    "version=9p2000.L,trans=virtio,access=any,loose,msize=262144"))
+		    "version=9p2000.L,trans=virtio,access=any,msize=262144"))
 		xerrno(errno, "mount 9p");
 
 	struct stat st1, st2;

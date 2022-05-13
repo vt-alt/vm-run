@@ -155,6 +155,8 @@ CONSOLE=${cmdline#console=}
 CONSOLE=${CONSOLE%% *}
 setsid --ctty --wait $SCRIPT 0<>/dev/"$CONSOLE" 1>&0 2>&0
 RET=$?
+# TODO: We can miss some stderr output here, for example script is not
+# executable due to incorrect TMPDIR.
 
 [ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
 case "$SCRIPT" in /tmp/*) umount $V -n --lazy /tmp;; esac
