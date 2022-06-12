@@ -480,7 +480,7 @@ if [ ! -f "${INITRD-}" ]; then
 			if [ -z "$DEPMOD" ] && [[ "$ROOT" =~ buildroot ]]; then
 				[ -n "$VERBOSE" ] && echo >&2 "Running temporary depmod (will undo later)."
 				TMP_DEPMOD="${TMPDIR-/tmp}/depmod-$KVER-$$.tgz"
-				trap "cleanup_depmod $?" EXIT
+				trap 'cleanup_depmod $?' EXIT
 				(set +f;
 				tar zcf $TMP_DEPMOD "$ROOT/lib/modules/$KVER"/modules.* 2>/dev/null)
 			fi
