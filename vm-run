@@ -379,7 +379,7 @@ list_kernels() {
 		# Raw vmlinux frequently do not work, with error:
 		# qemu-system-x86_64: Error loading uncompressed kernel without PVH ELF Note
 		KBD=$(find $kbuilddir -depth -maxdepth 3 -type f -name vmlinux)
-		ls -t $KBD $KBZ
+		[ -z "$KBD$KBZ" ] || ls -t $KBD $KBZ
 
 		# Kernels from packages have lowest priority.
 		ls -t /boot/vmlinu[xz]-*
