@@ -9,6 +9,7 @@ printf '\0337\033[r\033[999;999H\033[6n\0338'
 # move cursor to 999 999
 # report cursor position
 # restore cursor position
+declare -i rows cols
 IFS='[;R' read -r _ rows cols _
 stty "$previous"
 if [ "$cols" -gt 0 ] && [ "$rows" -gt 0 ]; then
