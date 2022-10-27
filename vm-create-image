@@ -1,0 +1,140 @@
+#!/bin/bash
+# Create ext4 image out of file tree
+# Copyright (c) 2022 Vitaly Chikunov <vt@altlinux.org>
+# Inspired by the work of Leonid Krivoshein <klark@altlinux.org> on usermode-fs-tools.
+
+set -efu
+export DEBUGFS_PAGER=cat
+export LC_ALL=C
+TMP=$(mktemp -d)
+# shellcheck disable=SC2064
+trap "rm -rf '$TMP'" 0
+
+show_usage()
+{
+	echo "Usage: $0 [options...] --image=IMAGE"
+	echo "  --image=      EXT4 image to create"
+	echo "  --dir=        Dir to copy into image (default: /)"
+	echo "  --exclude=    Mask to exclude from dir (default: /tmp/*)"
+	echo "  --volume=     EXT4 volume name (default: basename of IMAGE)"
+	echo "  --size=       Size of image (Kb) (default: double of du of DIR)"
+	echo "  --special     Copy special files (block, character devices, pipes)"
+	echo "  -v --verbose  Increase verbosity"
+	exit "$@"
+}
+
+error()
+{
+	echo >&2 "$(basename "$0"): $*"
+}
+
+# /tmp is on the same tmpfs so -xdev will not work.
+exclude="/tmp/*"
+dir="/"
+size=
+declare -i verbose=0
+
+for opt; do
+	shift
+	arg=${opt##*=}
+	case $opt in
+		--dir=*)        dir=$arg ;;
+		--exclude=*)    exclude=$arg ;;
+		--volume=*)     volume=$arg ;;
+		--image=*)      image=$arg ;;
+		--size=*)       size=$arg ;;
+		--special)      special=y ;;
+		-v | --verbose) verbose+=1 ;;
+		-h | --help)    show_usage ;;
+		*) echo >&2 "Unknown argument $opt"; exit 1 ;;
+	esac
+done
+[ $verbose -gt 0 ] && SETX="set -x" || SETX=:
+[ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
+
+[ -n "${image-}" ] || { error "Setting --image= is required."; show_usage 1; }
+
+if [ -z "$size" ]; then
+	total=$(command du -scx --exclude "$exclude" "$dir" 2>/dev/null | tail -1)
+	total=${total%%[[:space:]]*}
+	size=$((total * 2))
+	[ "$size" -lt 10000 ] && size="10M"
+fi
+rm -f "$image"
+[ -v volume ] || volume="$(basename "$image")"
+($SETX; /sbin/mke2fs -q -F -L "$volume" -m0 -- "$image" "$size")
+
+set_metadata()
+{
+	local t=$1 md=$2 us=$3 gr=$4 ts=$5 f=$6
+	local ty
+
+	[ "$us" -eq 0 ] || printf 'sif "%s" uid %s\n' "$f" "$us"
+	[ "$gr" -eq 0 ] || printf 'sif "%s" gid %s\n' "$f" "$gr"
+	printf 'sif "%s" mtime @%s\n' "$f" "${ts%.*}"
+	case "$t" in
+		s) ty=014 ;;
+		l) ty=012 ;;
+		f) ty=010 ;;
+		b) ty=006 ;;
+		d) ty=004 ;;
+		c) ty=002 ;;
+		p) ty=001 ;;
+	esac
+	[ "$ty" = "010" ] || printf 'sif "%s" mode %03o%04o\n' "$f" "$ty" "0$md"
+}
+
+declare -i hl
+( $SETX
+  find "$dir" -xdev \
+	 -not -path "$exclude" \
+	 -not -samefile "$image" \
+	 -not -samefile "$dir" \
+	 -printf '%D:%i %n %y %m %U %G %T@ %P\n'
+) | {
+printf 'lcd "%s"\n' "$dir"
+while read -r di hl t md us gr ts f; do
+	f="${f//[[:cntrl:]]/?}"
+	case "$t" in
+	   f)	if [ "$hl" -gt 1 ]; then
+			echo "$di $hl $t $md $us $gr $ts $f" >>"$TMP/hardlinks"
+			continue
+		fi
+		printf 'write "%s" "%s"\n' "$f" "$f"
+		;;
+	   d)	printf 'mkdir "%s"\n' "$f"
+		;;
+	   l)	printf 'symlink "%s" "%s"\n' "$f" "$(readlink -n -- "$dir/$f")"
+		;;
+	   *)	if [ -v special ]; then
+			case "$t" in
+				c | b) minmaj="$(stat -c '%Hr %Lr' -- "$dir/$f")" ;;
+				s) continue ;; # No support in debugfs(8).
+				*) continue ;;
+			esac
+			printf 'cd "%s"\nmknod "%s" %s %s\ncd /\n' \
+				"$(dirname "$f")" \
+				"$(basename "$f")" \
+				"$t" \
+				"$minmaj"
+		else
+			continue
+		fi
+		;;
+	esac
+	set_metadata "$t" "$md" "$us" "$gr" "$ts" "$f"
+done
+sort "$TMP/hardlinks" \
+| while read -r di hl t md us gr ts f; do
+	if [ "$di" != "${pdi-}" ]; then
+		printf 'write "%s" "%s"\n' "$f" "$f"
+		set_metadata "$t" "$md" "$us" "$gr" "$ts" "$f"
+		printf 'sif "%s" links_count %d\n' "$f" "$hl"
+		pdi="$di"
+		pf="$f"
+	else
+		printf 'ln "%s" "%s"\n' "$pf" "$f"
+	fi
+done
+} | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
+($SETX; /sbin/e2fsck -p "$image")
