@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.35
+Version: 1.36
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -124,6 +124,7 @@ bash -n filetrigger
 install -D -p -m 0755 vm-run-stub %buildroot%_bindir/vm-run
 %else
 install -D -p -m 0755 vm-run      %buildroot%_bindir/vm-run
+install -D -p -m 0755 vm-create-image %buildroot%_bindir/vm-create-image
 install -D -p -m 0755 vm-init     %buildroot%_libexecdir/vm-run/vm-init
 install -D -p -m 0755 initrd-init %buildroot%_libexecdir/vm-run/initrd-init
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
@@ -146,6 +147,7 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 %_bindir/vm-resize
 
 %ifarch %supported_arches
+%_bindir/vm-create-image
 %_libexecdir/vm-run
 %_rpmlibdir/vm-run.filetrigger
 
@@ -191,6 +193,9 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Fri Oct 28 2022 Vitaly Chikunov <vt@altlinux.org> 1.36-alt1
+- Add vm-create-image tool.
+
 * Mon Aug 08 2022 Vitaly Chikunov <vt@altlinux.org> 1.35-alt1
 - Fix (uninstalled) kernels list.
 - Allow to run auditctl.
