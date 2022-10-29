@@ -87,8 +87,9 @@ int main(int argc, char **argv)
 		xerrno(0, "not pid 1");
 
 	struct statfs stfs;
-	if (statfs("/", &stfs) || stfs.f_type != 0x01021994)
-		xerrno(0, "root is not tmpfs");
+	if (statfs("/", &stfs) ||
+	    (stfs.f_type != 0x01021994 && stfs.f_type != 0x858458f6))
+		xerrno(0, "root is not tmpfs or ramfs");
 
 	modprobe();
 
