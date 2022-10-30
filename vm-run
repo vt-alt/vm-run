@@ -97,6 +97,7 @@ for opt do
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
+		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -524,6 +525,15 @@ if [ ! -f "${INITRD-}" ]; then
 fi
 unset ROOT
 
+if [ -v LOGLEVEL ]; then
+	QUIET=
+	if [[ "$LOGLEVEL" =~ ^[[:digit:]]+$ ]]; then
+		APPEND+=" loglevel=$LOGLEVEL"
+	else
+		APPEND+=" earlyprintk=serial ignore_loglevel"
+	fi
+
+fi
 # QEMU Monitor is available (through character backend multiplexer), keys:
 #   C-a h    print this help
 #   C-a x    exit emulator
