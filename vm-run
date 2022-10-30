@@ -98,6 +98,7 @@ for opt do
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
 		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
+		--modules=*) MODULES+=" ${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -494,7 +495,7 @@ if [ ! -f "${INITRD-}" ]; then
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
 	CPIO=$(mktemp -d)
-	MODULES="9p 9pnet_virtio "
+	MODULES+=" 9p 9pnet_virtio "
 	[ "$VIRTIOBUS" = "pci" ] && MODULES+="virtio_pci" || MODULES+="virtio_mmio"
 	if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
 		echo "Error: modprobe failure." >&2
@@ -506,6 +507,7 @@ if [ ! -f "${INITRD-}" ]; then
 		exit 1
 	fi
 	while read skip f; do
+		[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
 		bn=${f##*/}
 		un=${bn%.?z}
 		[ -e "$CPIO/$un" ] && continue
