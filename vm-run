@@ -569,7 +569,7 @@ set +e
 		-nographic \
 		-no-reboot \
 		-fsdev local,id=root,path=/,security_model=none,multidevs=remap \
-		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=/dev/root \
+		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=virtio-9p:/ \
 		-device virtio-rng-$VIRTIOBUS \
 		-serial mon:stdio \
 		-kernel $KERNEL \

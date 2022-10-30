@@ -3,7 +3,7 @@
  * Simplistic initramfs init
  * Based on switch_root.c by Rob Landley.
  *
- * Copyright (c) 2020 Vitaly Chikunov <vt@altlinux.org>
+ * Copyright (c) 2020-2022 Vitaly Chikunov <vt@altlinux.org>
  */
 
 #include <errno.h>
@@ -18,6 +18,7 @@
 #include <sys/syscall.h>
 #include <sys/vfs.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #ifdef __KLIBC__
 extern long init_module(void *, unsigned long, const char *);
@@ -28,19 +29,33 @@ extern long init_module(void *, unsigned long, const char *);
 
 static char *newroot = "/newroot";
 static char *modules = "modules.conf";
-static char *init = "/usr/lib/vm-run/vm-init";
+static char *vm_init = "/usr/lib/vm-run/vm-init";
 
-static void xerrno(int err, const char *fmt, ...)
+static void warn(int err, const char *fmt, ...)
 {
-	va_list ap;
+	va_list args;
 
-	va_start(ap, fmt);
-	vprintf(fmt, ap);
-	va_end(ap);
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
 	if (err)
 		printf(": %s\n", strerror(err));
 	else
 		printf("\n");
+}
+
+static void xerrno(int err, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+	if (err)
+		printf(": %s\n", strerror(err));
+	else
+		printf("\n");
+
 	sleep(1);
 	reboot(RB_POWER_OFF);
 }
@@ -77,6 +92,65 @@ static void modprobe(void)
 	fclose(fd);
 }
 
+#define COMMAND_LINE_SIZE 2048
+static char cmdline[COMMAND_LINE_SIZE];
+void get_cmdline(void)
+{
+	const char *proc = "/proc";
+	if (mkdir(proc, 0755))
+		xerrno(errno, "mkdir '%s'", proc);
+	if (mount("proc", proc, "proc", 0, NULL))
+		xerrno(errno, "mount '%s'", proc);
+	const char *proc_cmdline = "/proc/cmdline";
+	FILE *fd = fopen(proc_cmdline, "r");
+	if (!fd)
+		xerrno(errno, "open '%s'", proc_cmdline);
+	if (!fgets(cmdline, sizeof(cmdline), fd))
+		xerrno(errno, "read error '%s'", proc_cmdline);
+	if (fclose(fd) == EOF)
+		warn(errno, "fclose '%s'", proc_cmdline);
+	if (umount(proc) == -1)
+		warn(errno, "umount '%s'", proc);
+}
+
+/* Get value of cmdline option. Options w/o value are skipped. */
+static char *get_option(const char *opt)
+{
+	char *p = cmdline;
+	size_t optlen = strlen(opt);
+
+	while (*p) {
+		while (isspace(*p))
+			p++;
+		if (!*p)
+			break;
+		char *o = p; // start of option
+		while (*p && !isspace(*p) && *p != '=')
+			p++;
+		int match = 0;
+		if ((p - o) == optlen && !strncmp(opt, o, p - o))
+			match++;
+		if (!*p || isspace(*p))
+			continue;
+		o = ++p; // start of value
+		if (*p == '"') {
+			o = ++p; // skip opening quote
+			while (*p && *p != '"')
+				p++;
+			if (match)
+				return strndup(o, p - o);
+			if (*p)
+				p++; // skip closing quote
+		} else {
+			while (*p && !isspace(*p))
+				p++;
+			if (match)
+				return strndup(o, p - o);
+		}
+	}
+	return NULL;
+}
+
 int main(int argc, char **argv)
 {
 	/* poweroff is not always installed. */
@@ -93,12 +167,24 @@ int main(int argc, char **argv)
 
 	modprobe();
 
+	get_cmdline();
+
 	if (mkdir(newroot, 0755))
 		xerrno(errno, "mkdir '%s'", newroot);
 
-	if (mount("/dev/root", newroot, "9p", 0,
-		    "version=9p2000.L,trans=virtio,access=any,msize=262144"))
-		xerrno(errno, "mount 9p");
+	char *root = get_option("root");
+	char *rootfstype = get_option("rootfstype");
+	char *rootflags = get_option("rootflags");
+	if (root) {
+		/* Mount what user requested via root=. */
+		if (mount(root, newroot, rootfstype, 0, rootflags))
+			xerrno(errno, "mount root=%s", root);
+	} else {
+		// mount source name is from qemu -device ..,mount_tag=
+		if (mount("virtio-9p:/", newroot, "9p", 0,
+			  "version=9p2000.L,trans=virtio,access=any,msize=262144"))
+			xerrno(errno, "mount 9p");
+	}
 
 	struct stat st1, st2;
 	if (chdir(newroot) ||
@@ -115,6 +201,10 @@ int main(int argc, char **argv)
 	if (chdir("/"))
 		xerrno(errno, "chdir");
 
+	/* Allow to run user specified init=, perhaps for experiments. */
+	char *init = get_option("init");
+	if (!init)
+		init = vm_init;
 	char * const args[] = { init, NULL };
 	execv(init, args);
 	xerrno(errno, "execv '%s'");
