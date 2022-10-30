@@ -35,12 +35,12 @@ if [ -n "${SCRIPT_TEXT-}" ]; then
 fi
 
 V mount -t tmpfs tmpfs /var/log
+V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 install -g utmp -m660 /dev/null /var/log/btmp
 install -g utmp -m664 /dev/null /var/log/wtmp
 
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
-V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 ln -sf /proc/kcore     /dev/core
 ln -sf /proc/self/fd   /dev/fd
 ln -sf /proc/self/fd/0 /dev/stdin

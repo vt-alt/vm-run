@@ -178,6 +178,18 @@ out:
 	return buf[0] ? buf : NULL;
 }
 
+static void mount_devtmpfs()
+{
+	const char *dev = "dev";
+
+	if (mkdir(dev, 0755) && errno != EEXIST)
+		xerrno(errno, "mkdir '%s'", dev);
+	if (mount("devtmpfs", dev, "devtmpfs", 0, NULL))
+		xerrno(errno, "mount %s", dev);
+	/* Will not be able to umount it, but it will disappear after
+	 * `mount --move . /` on its own. */
+}
+
 int main(int argc, char **argv)
 {
 	/* poweroff is not always installed. */
@@ -202,6 +214,7 @@ int main(int argc, char **argv)
 	if (root) {
 		char *rootfstype = get_option("rootfstype");
 		char *rootflags = get_option("rootflags");
+		mount_devtmpfs();
 		/* Mount what user requested via root=. */
 		if (mount(root, newroot, rootfstype, 0, rootflags))
 			xerrno(errno, "mount root=%s", root);
