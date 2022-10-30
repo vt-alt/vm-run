@@ -153,7 +153,20 @@ unset ov_count img_count prev_cmdline
 
 CONSOLE=${cmdline#console=}
 CONSOLE=${CONSOLE%% *}
-setsid --ctty --wait $SCRIPT 0<>/dev/"$CONSOLE" 1>&0 2>&0
+if [ -f "$SCRIPT" ]; then
+	set -- $SCRIPT
+else
+	echo "vm-init: SCRIPT=$SCRIPT not found, running rescue shell."
+	export PS1='(rescue) '
+	set -- /bin/bash
+fi
+# Try to run even if we don't have /dev.
+if [ -e /dev/"$CONSOLE" ]; then
+	setsid --ctty --wait "$@" 0<>/dev/"$CONSOLE" 1>&0 2>&0
+else
+	echo "vm-init: console=$CONSOLE is not accessible."
+	setsid --ctty --wait "$@" 2>&1
+fi
 RET=$?
 # TODO: We can miss some stderr output here, for example script is not
 # executable due to incorrect TMPDIR.
