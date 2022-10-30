@@ -12,8 +12,7 @@ trap "rm -rf '$TMP'" 0
 
 show_usage()
 {
-	echo "Usage: $0 [options...] --image=IMAGE"
-	echo "  --image=      EXT4 image to create"
+	echo "Usage: $0 [options...] <IMAGE>"
 	echo "  --dir=        Dir to copy into image (default: /)"
 	echo "  --exclude=    Mask to exclude from dir (default: /tmp/*)"
 	echo "  --volume=     EXT4 volume name (default: basename of IMAGE)"
@@ -28,10 +27,18 @@ error()
 	echo >&2 "$(basename "$0"): $*"
 }
 
+fatal()
+{
+	error "$@"
+	echo
+	show_usage 1
+}
+
 # /tmp is on the same tmpfs so -xdev will not work.
 exclude="/tmp/*"
 dir="/"
 size=
+image=
 declare -i verbose=0
 
 for opt; do
@@ -41,18 +48,18 @@ for opt; do
 		--dir=*)        dir=$arg ;;
 		--exclude=*)    exclude=$arg ;;
 		--volume=*)     volume=$arg ;;
-		--image=*)      image=$arg ;;
 		--size=*)       size=$arg ;;
 		--special)      special=y ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
-		*) echo >&2 "Unknown argument $opt"; exit 1 ;;
+		-*)             fatal "Unknown option $opt" ;;
+		*) [ -z "$image" ] && image="$opt" || fatal "Unknown argument: $opt" ;;
 	esac
 done
+[ -n "$image" ] || fatal "Specifying IMAGE is required."
+
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
-
-[ -n "${image-}" ] || { error "Setting --image= is required."; show_usage 1; }
 
 if [ -z "$size" ]; then
 	total=$(command du -scx --exclude "$exclude" "$dir" 2>/dev/null | tail -1)
