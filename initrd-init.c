@@ -151,6 +151,33 @@ static char *get_option(const char *opt)
 	return NULL;
 }
 
+// source name from qemu -device ..,mount_tag=
+static char *find_mount_tag()
+{
+	const char *sys = "/sys";
+	if (mkdir(sys, 0755))
+		xerrno(errno, "mkdir '%s'", sys);
+	if (mount("sysfs", sys, "sysfs", 0, NULL)) {
+		warn(errno, "mount '%s'", sys);
+		return NULL;
+	}
+	const char *mount_tag = "/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag";
+	FILE *fd = fopen(mount_tag, "r");
+	if (!fd) {
+		warn(errno, "open '%s'", mount_tag);
+		goto out;
+	}
+	static char buf[128];
+	if (!fread(buf, 1, sizeof(buf), fd))
+		warn(errno, "read '%s'", mount_tag);
+	if (fclose(fd) == EOF)
+		warn(errno, "fclose '%s'", mount_tag);
+out:
+	if (umount(sys) == -1)
+		warn(errno, "umount '%s'", sys);
+	return buf[0] ? buf : NULL;
+}
+
 int main(int argc, char **argv)
 {
 	/* poweroff is not always installed. */
@@ -167,23 +194,26 @@ int main(int argc, char **argv)
 
 	modprobe();
 
-	get_cmdline();
-
 	if (mkdir(newroot, 0755))
 		xerrno(errno, "mkdir '%s'", newroot);
 
+	get_cmdline();
 	char *root = get_option("root");
-	char *rootfstype = get_option("rootfstype");
-	char *rootflags = get_option("rootflags");
 	if (root) {
+		char *rootfstype = get_option("rootfstype");
+		char *rootflags = get_option("rootflags");
 		/* Mount what user requested via root=. */
 		if (mount(root, newroot, rootfstype, 0, rootflags))
 			xerrno(errno, "mount root=%s", root);
 	} else {
-		// mount source name is from qemu -device ..,mount_tag=
-		if (mount("virtio-9p:/", newroot, "9p", 0,
-			  "version=9p2000.L,trans=virtio,access=any,msize=262144"))
-			xerrno(errno, "mount 9p");
+		char *mount_tag = find_mount_tag();
+		if (mount_tag) {
+			if (mount(mount_tag, newroot, "9p", 0,
+				  "version=9p2000.L,trans=virtio,access=any,msize=262144")) {
+				xerrno(errno, "mount root %s", mount_tag);
+			}
+		} else
+			xerrno(0, "rootfs not found.");
 	}
 
 	struct stat st1, st2;
