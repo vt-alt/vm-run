@@ -18,6 +18,7 @@ show_usage()
 	echo "  --volume=     EXT4 volume name (default: basename of IMAGE)"
 	echo "  --size=       Size of image (Kb) (default: double of du of DIR)"
 	echo "  --special     Copy special files (block, character devices, pipes)"
+	echo "  --realuids    Set uid/gid to real values instead of root:root."
 	echo "  -v --verbose  Increase verbosity"
 	exit "$@"
 }
@@ -50,6 +51,7 @@ for opt; do
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
 		--special)      special=y ;;
+		--realuids)     realuids=y ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -76,8 +78,10 @@ set_metadata()
 	local t=$1 md=$2 us=$3 gr=$4 ts=$5 f=$6
 	local ty
 
-	[ "$us" -eq 0 ] || printf 'sif "%s" uid %s\n' "$f" "$us"
-	[ "$gr" -eq 0 ] || printf 'sif "%s" gid %s\n' "$f" "$gr"
+	if [ -v realuids ]; then
+		[ "$us" -eq 0 ] || printf 'sif "%s" uid %s\n' "$f" "$us"
+		[ "$gr" -eq 0 ] || printf 'sif "%s" gid %s\n' "$f" "$gr"
+	fi
 	printf 'sif "%s" mtime @%s\n' "$f" "${ts%.*}"
 	case "$t" in
 		s) ty=014 ;;
