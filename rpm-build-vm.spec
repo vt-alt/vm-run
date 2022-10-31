@@ -23,6 +23,7 @@ Source: %name-%version.tar
 BuildRequires: klibc-devel
 # For %%check.
 BuildRequires: /dev/kvm
+BuildRequires: shellcheck
 
 # Try to load un-def kernel this way to avoid "forbidden dependencies"
 # from sisyphus_check.
@@ -113,11 +114,7 @@ Run checkinstall tests for vm-run.
 CFLAGS="%optflags" make
 %endif
 
-bash -n vm-run
-bash -n vm-resize
-bash -n vm-run-stub
-bash -n vm-init
-bash -n filetrigger
+make check
 
 %install
 %ifnarch %supported_arches
