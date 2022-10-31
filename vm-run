@@ -262,7 +262,7 @@ if [ "$BIOS" = "uefi" ]; then
 		exit 1
 	fi
 elif [ "$BIOS" = "secureboot" ]; then
-	if [ -n " ${SB_PFLASH-}" ]; then
+	if [ -n "${SB_PFLASH-}" ]; then
 		OPTS+=" -global ICH9-LPC.disable_s3=1 -M q35,smm=on"
 		OPTS+=" -global driver=cfi.pflash01,property=secure,value=on"
 		for f in ${SB_PFLASH-}; do

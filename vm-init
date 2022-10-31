@@ -14,7 +14,7 @@ read -r cmdline < /proc/cmdline
 cmdline+=" " # Add separator so we can easily match complete words
 if [ -z "${cmdline/* VERBOSE *}" ]; then
 	V=-v
-	V() { echo "- $@"; "$@"; }
+	V() { echo "- $*"; "$@"; }
 else
 	V=
 	V() { "$@"; }
