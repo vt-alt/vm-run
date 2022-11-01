@@ -1,0 +1,54 @@
+# bash completion for vm-run
+# shellcheck disable=SC2207,SC2155,SC2148
+
+_vm_run()
+{
+    local cur=${COMP_WORDS[$COMP_CWORD]} prev=${COMP_WORDS[COMP_CWORD-1]}
+    local cmd=${1##*/}
+    if [ "$cur" = '=' ]; then
+        prev+=$cur
+        cur=
+    elif [ "$prev" = '=' ]; then
+        prev=${COMP_WORDS[COMP_CWORD-2]}$prev
+    fi
+    case "$prev" in
+        --kvm=)
+            COMPREPLY=( $(compgen -W "all cond only try" -- "$cur")  )
+            return
+            ;;
+        --bios=)
+            COMPREPLY=( $(compgen -W "secureboot microvm uefi" -- "$cur")  )
+            return
+            ;;
+        --fat=)
+            compopt -o filenames 2>/dev/null
+            COMPREPLY=( $(compgen -d -- "$cur") )
+            return
+            ;;
+        --drive=)
+            compopt -o filenames 2>/dev/null
+            COMPREPLY=( $(compgen -f -- "$cur") )
+            return
+            ;;
+        --kernel=)
+            local kernels=$(vm-run --kernels |& grep -Eo '/\S+' | sed 's!^/boot/vmlinuz-!!')
+            COMPREPLY=( $(compgen -W "\$kernels" -- "$cur") )
+            return
+            ;;
+    esac
+    if [[ $cur == -* ]]; then
+        local script=$(type -p "$cmd")
+        [ -n "$script" ] || return
+        local opts=$(awk '/for opt;? do/' RS= ORS='\n\n' "$script" | grep -Eo '.+\)' | grep -Po -e '--[^^)*]+')
+        COMPREPLY=( $(compgen -W "\$opts" -- "$cur") )
+        [[ ${COMPREPLY-} == *= ]] && compopt -o nospace
+    elif [ "$cmd" = "vm-run" ]; then
+        COMPREPLY=( $(compgen -c -- "$cur") )
+    elif [ "$cmd" = "vm-create-image" ]; then
+        compopt -o filenames 2>/dev/null
+        COMPREPLY=( $(compgen -f -- "$cur") )
+    fi
+} &&
+    complete -F _vm_run vm-run vm-create-image
+
+# ex: filetype=sh sw=4 et

@@ -125,6 +125,7 @@ install -D -p -m 0755 vm-create-image %buildroot%_bindir/vm-create-image
 install -D -p -m 0755 vm-init     %buildroot%_libexecdir/vm-run/vm-init
 install -D -p -m 0755 initrd-init %buildroot%_libexecdir/vm-run/initrd-init
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
+install -Dp bash_completion %buildroot%_sysconfdir/bashrc.d/vm_completion.sh
 %endif
 install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 
@@ -147,6 +148,7 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 %_bindir/vm-create-image
 %_libexecdir/vm-run
 %_rpmlibdir/vm-run.filetrigger
+%_sysconfdir/bashrc.d/vm*.sh
 
 %post
 # Fix permissions to boot the installed kernel

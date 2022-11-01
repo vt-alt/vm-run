@@ -78,7 +78,7 @@ for opt do
 		--fat=*)     OPTS+=" -drive format=raw,file=fat:rw:${opt#*=}" ;;
 		--overlay=*) APPEND+=" OVERLAY=${opt#*=}" ;;
 		--uefi)	     BIOS=uefi ;;
-		--securebo*) BIOS=secureboot ;;
+		--secureboot) BIOS=secureboot ;;
 		--bios=*)    BIOS="${opt#*=}" ;;
 		--tcg)	     KVM= ;;
 		--kvm=*)     KVM="${opt#*=}" ;;
