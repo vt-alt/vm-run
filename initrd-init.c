@@ -250,5 +250,5 @@ int main(int argc, char **argv)
 		init = vm_init;
 	char * const args[] = { init, NULL };
 	execv(init, args);
-	xerrno(errno, "execv '%s'");
+	xerrno(errno, "execv '%s'", init);
 }
