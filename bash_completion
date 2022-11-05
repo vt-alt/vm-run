@@ -24,7 +24,7 @@ _vm_run()
             COMPREPLY=( $(compgen -W "ext2 ext3 ext4" -- "$cur")  )
             return
             ;;
-        --fat=)
+        --fat= | --ls=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -d -- "$cur") )
             return

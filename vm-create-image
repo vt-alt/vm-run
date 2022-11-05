@@ -24,6 +24,11 @@ show_usage()
 	echo "  --special      Copy special files (block, character devices, pipes)"
 	echo "  --volume=      EXT4 volume name (default: basename of IMAGE)"
 	echo "  -v, --verbose  Increase verbosity"
+	echo
+	echo "Informational options:"
+	echo "  --cat=FILE     Cat FILE from IMAGE"
+	echo "  --ls=DIR       Do not create an image but 'ls -l DIR' in it."
+	echo "  --stat=FILE    Run stat on FILE in IMAGE"
 	exit "$@"
 }
 
@@ -46,6 +51,7 @@ size=
 image=
 declare -i verbose=0
 fs_type=ext4
+unset ls_path cat_path stat_path
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y
@@ -59,6 +65,9 @@ for opt; do
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
 		--fs=*)         fs_type=$arg ;;
+		--ls=*)         ls_path=$arg ;;
+		--cat=*)        cat_path=$arg ;;
+		--stat=*)       stat_path=$arg ;;
 		--special)      special=y ;;
 		--realuids)     realuids=y ;;
 		--no-realuids)  unset realuids ;;
@@ -74,6 +83,16 @@ done
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
 
+if [ -v ls_path ]; then
+	DEBUGFS_PAGER=cat /sbin/debugfs "$image" -R "ls -l $ls_path"
+	exit
+elif [ -v cat_path ]; then
+	/sbin/debugfs "$image" -R "cat $cat_path" 2>/dev/null
+	exit
+elif [ -v stat_path ]; then
+	DEBUGFS_PAGER=cat /sbin/debugfs "$image" -R "stat $stat_path"
+	exit
+fi
 if [ -z "$size" ]; then
 	total=$(command du -scx --exclude "$exclude" "$dir" 2>/dev/null | tail -1)
 	total=${total%%[[:space:]]*}
