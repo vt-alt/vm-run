@@ -20,6 +20,10 @@ _vm_run()
             COMPREPLY=( $(compgen -W "secureboot microvm uefi" -- "$cur")  )
             return
             ;;
+        --fs=)
+            COMPREPLY=( $(compgen -W "ext2 ext3 ext4" -- "$cur")  )
+            return
+            ;;
         --fat=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -d -- "$cur") )

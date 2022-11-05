@@ -17,6 +17,7 @@ show_usage()
 	echo
 	echo "  --dir=         Dir to copy into image (default: /)"
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
+	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
 	echo "                 Default when libfakeroot is loaded (as is under rooter)."
 	echo "  --size=        Size of image (Kb) (default: double of du of DIR)"
@@ -44,6 +45,7 @@ dir="/"
 size=
 image=
 declare -i verbose=0
+fs_type=ext4
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y
@@ -56,6 +58,7 @@ for opt; do
 		--exclude=*)    exclude=$arg ;;
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
+		--fs=*)         fs_type=$arg ;;
 		--special)      special=y ;;
 		--realuids)     realuids=y ;;
 		--no-realuids)  unset realuids ;;
@@ -68,6 +71,7 @@ done
 [ -n "$image" ] || fatal "Specifying IMAGE is required."
 
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
+[ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
 
 if [ -z "$size" ]; then
@@ -76,11 +80,14 @@ if [ -z "$size" ]; then
 	size=$((total * 2))
 	[ "$size" -lt 10000 ] && size="10M"
 fi
-[ $verbose -gt 0 ] && echo >&2 "Creating ext4 image '$image' size=$size" \
+[ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
 	${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
 rm -f "$image"
 [ -v volume ] || volume="$(basename "$image")"
-($SETX; /sbin/mke2fs -q -F -L "$volume" -m0 -- "$image" "$size")
+# mke2fs does not create ext4 by default (even if `-t ext4` is passed),
+# requiring appropriate additional options (like enabling journal, etc),
+# but mkfs.ext4 does the right thing.
+($SETX; /sbin/mkfs.$fs_type ${VERBOSE:--q} -F -L "$volume" -m0 -- "$image" "$size")
 
 set_metadata()
 {
@@ -157,4 +164,4 @@ sort "$TMP/hardlinks" \
 	fi
 done
 } | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
-($SETX; /sbin/e2fsck -p "$image")
+($SETX; /sbin/e2fsck $VERBOSE -p "$image")
