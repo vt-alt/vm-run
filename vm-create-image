@@ -18,6 +18,7 @@ show_usage()
 	echo "  --dir=         Dir to copy into image (default: /)"
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
+	echo "                 Default when libfakeroot is loaded (as is under rooter)."
 	echo "  --size=        Size of image (Kb) (default: double of du of DIR)"
 	echo "  --special      Copy special files (block, character devices, pipes)"
 	echo "  --volume=      EXT4 volume name (default: basename of IMAGE)"
@@ -44,6 +45,9 @@ size=
 image=
 declare -i verbose=0
 
+# Seems to be true under rooter and scriptlets.
+[[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y
+
 for opt; do
 	shift
 	arg=${opt##*=}
@@ -54,6 +58,7 @@ for opt; do
 		--size=*)       size=$arg ;;
 		--special)      special=y ;;
 		--realuids)     realuids=y ;;
+		--no-realuids)  unset realuids ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -71,6 +76,8 @@ if [ -z "$size" ]; then
 	size=$((total * 2))
 	[ "$size" -lt 10000 ] && size="10M"
 fi
+[ $verbose -gt 0 ] && echo >&2 "Creating ext4 image '$image' size=$size" \
+	${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
 rm -f "$image"
 [ -v volume ] || volume="$(basename "$image")"
 ($SETX; /sbin/mke2fs -q -F -L "$volume" -m0 -- "$image" "$size")
