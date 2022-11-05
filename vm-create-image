@@ -12,14 +12,16 @@ trap "rm -rf '$TMP'" 0
 
 show_usage()
 {
-	echo "Usage: $0 [options...] <IMAGE>"
-	echo "  --dir=        Dir to copy into image (default: /)"
-	echo "  --exclude=    Mask to exclude from dir (default: /tmp/*)"
-	echo "  --volume=     EXT4 volume name (default: basename of IMAGE)"
-	echo "  --size=       Size of image (Kb) (default: double of du of DIR)"
-	echo "  --special     Copy special files (block, character devices, pipes)"
-	echo "  --realuids    Set uid/gid to real values instead of root:root."
-	echo "  -v --verbose  Increase verbosity"
+	echo "Usage: $0 [OPTIONS...] IMAGE"
+	echo "Create ext4 IMAGE from rootfs (or DIR)."
+	echo
+	echo "  --dir=         Dir to copy into image (default: /)"
+	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
+	echo "  --realuids     Set UID/GID to real values instead of root:root."
+	echo "  --size=        Size of image (Kb) (default: double of du of DIR)"
+	echo "  --special      Copy special files (block, character devices, pipes)"
+	echo "  --volume=      EXT4 volume name (default: basename of IMAGE)"
+	echo "  -v, --verbose  Increase verbosity"
 	exit "$@"
 }
 
