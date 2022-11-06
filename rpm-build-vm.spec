@@ -93,6 +93,16 @@ This package is a stub instead of RPM helper to run QEMU inside hasher
 on supported architectures (this one (%_arch) is unsupported).
 %endif
 
+%package createimage
+Summary: Filetrigger to create ext4 image for vm-run
+Group: Development/Other
+BuildArch: noarch
+Requires: %name = %EVR
+
+%description createimage
+This is optional package containing a filetrigger to create an ext4 image
+at "/tmp/vm-ext4.img" out of your hasher root to run vm-run with it as rootfs.
+
 %package checkinstall
 Summary: Checkinstall for vm-run
 Group: Development/Other
@@ -125,6 +135,7 @@ install -D -p -m 0755 vm-create-image %buildroot%_bindir/vm-create-image
 install -D -p -m 0755 vm-init     %buildroot%_libexecdir/vm-run/vm-init
 install -D -p -m 0755 initrd-init %buildroot%_libexecdir/vm-run/initrd-init
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
+install -D -p -m 0755 createimage %buildroot%_rpmlibdir/z-vm-createimage.filetrigger
 install -Dp bash_completion %buildroot%_sysconfdir/bashrc.d/vm_completion.sh
 %endif
 install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
@@ -139,6 +150,11 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 %files
 
 %files checkinstall
+
+%files createimage
+%ifarch %supported_arches
+%_rpmlibdir/z-vm-createimage.filetrigger
+%endif
 
 %files run
 %_bindir/vm-run

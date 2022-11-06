@@ -6,6 +6,7 @@ scripts = \
 	vm-create-image \
 	vm-resize \
 	filetrigger \
+	createimage \
 	bash_completion
 
 initrd-init: initrd-init.c

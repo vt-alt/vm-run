@@ -1,0 +1,8 @@
+#!/bin/sh
+# filetrigger to run vm-create-image
+
+[ -d /.host -a -d /.in -a -d /.out ] || exit 0
+
+vm-create-image /tmp/vm-ext4.img
+chmod a+rw /tmp/vm-ext4.img
+exit 0
