@@ -32,6 +32,7 @@ KVM=try		# try to use kvm by default
 VIRTIOBUS=pci	# virtio bus to use
 ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
 SANDBOX=on,spawn=deny
+MULTIDEVS=remap
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -45,6 +46,7 @@ usage() {
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
 	echo "    --mem=           Pass '-m ...' to qemu (memory size)"
 	echo "    --microvm        Use microvm machine type"
+	echo "    --multidevs=     9p multidevs mode (remap, forbid, warn)"
 	echo "    --overlay=FS[,SIZE=][:PATH]"
        	echo "                     Auto create overlay FS over PATH"
 	echo "    --qemu='...'     Pass additional options to qemu"
@@ -103,6 +105,7 @@ for opt do
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
 		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
+		--multidevs=*) MULTIDEVS="${opt#*=}" ;;
 		--modules=*) MODULES+=" ${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
@@ -585,7 +588,7 @@ set +e
 		-nodefaults \
 		-nographic \
 		-no-reboot \
-		-fsdev local,id=root,path=/,security_model=none,multidevs=remap \
+		-fsdev local,id=root,path=/,security_model=none,multidevs=$MULTIDEVS \
 		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=virtio-9p:/ \
 		-device virtio-rng-$VIRTIOBUS \
 		-serial mon:stdio \

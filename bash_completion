@@ -24,6 +24,10 @@ _vm_run()
             COMPREPLY=( $(compgen -W "ext2 ext3 ext4" -- "$cur")  )
             return
             ;;
+        --multidevs=)
+            COMPREPLY=( $(compgen -W "forbid remap warn" -- "$cur")  )
+            return
+            ;;
         --fat= | --ls=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -d -- "$cur") )
