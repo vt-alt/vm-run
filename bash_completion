@@ -28,12 +28,12 @@ _vm_run()
             COMPREPLY=( $(compgen -W "forbid remap warn" -- "$cur")  )
             return
             ;;
-        --fat= | --ls=)
+        --fat= | --ls= | --create-rootfs=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -d -- "$cur") )
             return
             ;;
-        --drive=)
+        --drive= | --rootfs=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -f -- "$cur") )
             return

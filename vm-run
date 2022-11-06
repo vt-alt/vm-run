@@ -33,6 +33,8 @@ VIRTIOBUS=pci	# virtio bus to use
 ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
 SANDBOX=on,spawn=deny
 MULTIDEVS=remap
+MODULES=
+ROOTFS=
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -50,6 +52,9 @@ usage() {
 	echo "    --overlay=FS[,SIZE=][:PATH]"
        	echo "                     Auto create overlay FS over PATH"
 	echo "    --qemu='...'     Pass additional options to qemu"
+	echo "    --rootfs=IMAGE   Use existing ext4 IMAGE for rootfs instead of 9p"
+	echo "                     To generate new image use --create-rootfs=IMAGE"
+	echo "                     or vm-create-image tool."
 	echo "    --secureboot     Use OVMF SecureBoot fw (alias --bios=secureboot)"
 	echo "    -s, --silent     Do not show qemu command"
 	echo "    --tcg            Do not try to enable KVM"
@@ -107,6 +112,8 @@ for opt do
 		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
 		--multidevs=*) MULTIDEVS="${opt#*=}" ;;
 		--modules=*) MODULES+=" ${opt#*=}" ;;
+		--create-rootfs=*) ROOTFS="${opt#*=}"; ROOTFSCREATE=y ;;
+		--rootfs=*)        ROOTFS="${opt#*=}"; ROOTFSCREATE= ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -374,6 +381,20 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 	fi
 fi
 
+if [ -n "$ROOTFS" ]; then
+	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFS"
+	eval "$(/sbin/blkid -o export -- "$ROOTFS")"
+	if [[ ! "${TYPE-}" =~ ^ext[234]$ ]]; then
+		echo "Error: ext4 image '$ROOTFS' not found." >&2
+		exit 1
+	fi
+	OPTS+=" -drive file=$ROOTFS,format=raw"
+	APPEND+=" root=/dev/sda rootfstype=$TYPE"
+	MODULES+=" virtio-blk sd_mod ata_piix"
+else
+	MODULES+=" 9p 9pnet_virtio"
+fi
+
 # Sorted by preference (%buildroot first) and mtime (newer first)
 list_kernels() {
 	(
@@ -503,8 +524,7 @@ if [ ! -f "${INITRD-}" ]; then
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
 	CPIO=$(mktemp -d)
-	MODULES+=" 9p 9pnet_virtio "
-	[ "$VIRTIOBUS" = "pci" ] && MODULES+="virtio_pci" || MODULES+="virtio_mmio"
+	[ "$VIRTIOBUS" = "pci" ] && MODULES+=" virtio_pci" || MODULES+=" virtio_mmio"
 	if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
 		echo "Error: modprobe failure." >&2
 		if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then

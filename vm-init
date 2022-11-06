@@ -25,6 +25,20 @@ SCRIPT=${SCRIPT%% *}
 eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
 export MODPROBE_OPTIONS
 
+V mount -t sysfs -o nosuid,noexec,nodev sys /sys
+
+if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
+	V modprobe --quiet --all 9p 9pnet_virtio
+	mount_tag_f="/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag"
+	if [ -f "$mount_tag_f" ]; then
+		read mount_tag < $mount_tag_f
+		mkdir -p /mnt/9p
+		V mount -t 9p -o "9p2000.L,trans=virtio,access=any,msize=262144" "$mount_tag" /mnt/9p
+		V mount --bind /mnt/9p/usr/src /usr/src
+		unset mount_tag mount_tag_f
+	fi
+fi
+
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
 V mount -t tmpfs tmpfs /tmp
@@ -38,8 +52,6 @@ V mount -t tmpfs tmpfs /var/log
 V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 install -g utmp -m660 /dev/null /var/log/btmp
 install -g utmp -m664 /dev/null /var/log/wtmp
-
-V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
 ln -sf /proc/kcore     /dev/core
 ln -sf /proc/self/fd   /dev/fd
