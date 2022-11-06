@@ -391,9 +391,13 @@ if [ -n "$ROOTFS" ]; then
 	OPTS+=" -drive file=$ROOTFS,format=raw"
 	APPEND+=" root=/dev/sda rootfstype=$TYPE"
 	MODULES+=" virtio-blk sd_mod ata_piix"
-else
-	MODULES+=" 9p 9pnet_virtio"
 fi
+# We shall load these modules even though we're using ext4 for rootfe
+# (but supposedly we can mount 9p later and modprobe before that).
+# It's because we need to access SCRIPT= (to read MODPROBE_OPTIONS)
+# which could be (and will be) under /usr/src, but we bind mount it
+# from 9p:/, thus 9p modules should be already loaded.
+MODULES+=" 9p 9pnet_virtio"
 
 # Sorted by preference (%buildroot first) and mtime (newer first)
 list_kernels() {

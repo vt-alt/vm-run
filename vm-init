@@ -20,15 +20,9 @@ else
 	V() { "$@"; }
 fi
 
-SCRIPT=${cmdline#* SCRIPT=}
-SCRIPT=${SCRIPT%% *}
-eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
-export MODPROBE_OPTIONS
-
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
 if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
-	V modprobe --quiet --all 9p 9pnet_virtio
 	mount_tag_f="/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag"
 	if [ -f "$mount_tag_f" ]; then
 		read mount_tag < $mount_tag_f
@@ -38,6 +32,12 @@ if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
 		unset mount_tag mount_tag_f
 	fi
 fi
+
+SCRIPT=${cmdline#* SCRIPT=}
+SCRIPT=${SCRIPT%% *}
+eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
+# Last MODPROBE_OPTIONS will win.
+export MODPROBE_OPTIONS
 
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
