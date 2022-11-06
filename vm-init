@@ -39,6 +39,10 @@ eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
 # Last MODPROBE_OPTIONS will win.
 export MODPROBE_OPTIONS
 
+if ! modprobe -q ext4 >/dev/null 2>&1; then
+	V /sbin/depmod
+fi
+
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
 V mount -t tmpfs tmpfs /tmp
