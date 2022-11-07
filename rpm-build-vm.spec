@@ -214,8 +214,18 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
-* Fri Oct 28 2022 Vitaly Chikunov <vt@altlinux.org> 1.36-alt1
-- Add vm-create-image tool.
+* Mon Nov 07 2022 Vitaly Chikunov <vt@altlinux.org> 1.36-alt1
+- Add vm-create-image tool that can generate ext4 image out of hasher root.
+- vm-run: Support for booting from ext4 image using --rootfs=
+  (or --create-rootfs=) option(s). This way you have rull root access to the
+  system tree.
+  Note that 9p is still (bind) mounted over '/usr/src', so you can place your
+  test artifacts there.
+- Add rpm-build-vm-createimage package with filetrigger to automatically
+  generate that ext4 rootfs image. (If you need super precise uids/gids on
+  the copies of hasher files, otherwise they maybe roughed to root:root.)
+- Bunch of small code and help text improvements.
+- Simplistic bash completion support.
 
 * Mon Aug 08 2022 Vitaly Chikunov <vt@altlinux.org> 1.35-alt1
 - Fix (uninstalled) kernels list.
