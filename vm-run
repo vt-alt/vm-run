@@ -391,7 +391,7 @@ if [ -n "$ROOTFS" ]; then
 		exit 1
 	fi
 	OPTS+=" -drive file=$ROOTFS,format=raw"
-	APPEND+=" root=/dev/sda rootfstype=$TYPE"
+	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
 	MODULES+=" virtio-blk sd_mod ata_piix"
 fi
 # We shall load these modules even though we're using ext4 for rootfe

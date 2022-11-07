@@ -1,4 +1,6 @@
 CFLAGS += -static -Wl,-z,noexecstack
+LDLIBS += $(shell pkg-config --libs --static blkid)
+
 scripts = \
 	vm-run \
 	vm-run-stub \

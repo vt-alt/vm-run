@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#include <blkid/blkid.h>
+
 #ifdef __KLIBC__
 extern long init_module(void *, unsigned long, const char *);
 # define reboot(flag) reboot(flag, NULL)
@@ -151,30 +153,30 @@ static char *get_option(const char *opt)
 	return NULL;
 }
 
-// source name from qemu -device ..,mount_tag=
-static char *find_mount_tag()
+static void mount_sys(void)
 {
 	const char *sys = "/sys";
 	if (mkdir(sys, 0755))
 		xerrno(errno, "mkdir '%s'", sys);
-	if (mount("sysfs", sys, "sysfs", 0, NULL)) {
+	if (mount("sysfs", sys, "sysfs", 0, NULL))
 		warn(errno, "mount '%s'", sys);
-		return NULL;
-	}
+}
+
+// source name from qemu -device ..,mount_tag=
+static char *find_mount_tag(void)
+{
+	mount_sys();
 	const char *mount_tag = "/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag";
 	FILE *fd = fopen(mount_tag, "r");
 	if (!fd) {
 		warn(errno, "open '%s'", mount_tag);
-		goto out;
+		return NULL;
 	}
 	static char buf[128];
 	if (!fread(buf, 1, sizeof(buf), fd))
 		warn(errno, "read '%s'", mount_tag);
 	if (fclose(fd) == EOF)
 		warn(errno, "fclose '%s'", mount_tag);
-out:
-	if (umount(sys) == -1)
-		warn(errno, "umount '%s'", sys);
 	return buf[0] ? buf : NULL;
 }
 
@@ -213,9 +215,20 @@ int main(int argc, char **argv)
 	char *root = get_option("root");
 	if (root) {
 		char *rootfstype = get_option("rootfstype");
-		char *rootflags = get_option("rootflags");
+		char *rootflags  = get_option("rootflags");
 		mount_devtmpfs();
-		/* Mount what user requested via root=. */
+		if (strncmp(root, "/dev/", 5)) {
+			mount_sys();
+			/* Tag formats are in findfs(8). */
+			char *dev = blkid_evaluate_tag(root, NULL, NULL);
+			if (!dev) {
+				/* There are some output from resolver, like
+				 * 'Can't open blockdev', which interferes with
+				 * this message on console. */
+				warn(0, "unable to resolve '%s'", root);
+			} else
+				root = dev;
+		}
 		if (mount(root, newroot, rootfstype, 0, rootflags))
 			xerrno(errno, "mount root=%s", root);
 	} else {

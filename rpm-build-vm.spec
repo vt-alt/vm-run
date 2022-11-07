@@ -17,10 +17,11 @@ Source: %name-%version.tar
 
 %ifarch %supported_arches
 # We need static libs to build initramfs /init binary:
-#   klibc-devel        - cannot call arbitrary syscall.
+#   klibc-devel        - cannot call arbitrary syscall, cannot link with libblkid.
 #   musl-devel         - does not cover all arches.
 #   glibc-devel-static - binaries are bigger.
-BuildRequires: klibc-devel
+BuildRequires: glibc-devel-static
+BuildRequires: libblkid-devel-static
 # For %%check.
 BuildRequires: /dev/kvm
 BuildRequires: shellcheck
