@@ -54,7 +54,7 @@ fs_type=ext4
 unset ls_path cat_path stat_path
 
 # Seems to be true under rooter and scriptlets.
-[[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y
+[[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
 
 for opt; do
 	shift
@@ -78,6 +78,11 @@ for opt; do
 	esac
 done
 [ -n "$image" ] || fatal "Specifying IMAGE is required."
+
+if [ "${realuids-}" = 'n' ]; then
+	unset realuids
+	error "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
+fi
 
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
