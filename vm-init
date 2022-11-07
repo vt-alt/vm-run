@@ -26,7 +26,7 @@ SCRIPT=${SCRIPT%% *}
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
 if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
-	mount_tag_f="/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag"
+	mount_tag_f=( /sys/bus/virtio/drivers/9pnet_virtio/virtio*/mount_tag )
 	if [ -f "$mount_tag_f" ]; then
 		read mount_tag < $mount_tag_f
 		mkdir -p /mnt/9p

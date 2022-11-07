@@ -1,4 +1,4 @@
-CFLAGS += -static -Wl,-z,noexecstack
+CFLAGS += -static -Wl,-z,noexecstack -Wall -Werror -fanalyzer
 LDLIBS += $(shell pkg-config --libs --static blkid)
 
 scripts = \

@@ -6,8 +6,10 @@
  * Copyright (c) 2020-2022 Vitaly Chikunov <vt@altlinux.org>
  */
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glob.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,8 +20,6 @@
 #include <sys/syscall.h>
 #include <sys/vfs.h>
 #include <unistd.h>
-#include <ctype.h>
-
 #include <blkid/blkid.h>
 
 #ifdef __KLIBC__
@@ -33,6 +33,7 @@ static char *newroot = "/newroot";
 static char *modules = "modules.conf";
 static char *vm_init = "/usr/lib/vm-run/vm-init";
 
+__attribute__ ((format (printf, 2, 3)))
 static void warn(int err, const char *fmt, ...)
 {
 	va_list args;
@@ -46,6 +47,7 @@ static void warn(int err, const char *fmt, ...)
 		printf("\n");
 }
 
+__attribute__ ((format (printf, 2, 3)))
 static void xerrno(int err, const char *fmt, ...)
 {
 	va_list args;
@@ -166,7 +168,15 @@ static void mount_sys(void)
 static char *find_mount_tag(void)
 {
 	mount_sys();
-	const char *mount_tag = "/sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag";
+
+	glob_t globbuf;
+	int n = glob("/sys/bus/virtio/drivers/9pnet_virtio/virtio*/mount_tag",
+		     GLOB_NOSORT, NULL, &globbuf);
+	if (n || globbuf.gl_pathc < 1) {
+		warn(errno, "glob: 9p mount_tag not found (ret: %d)", n);
+		return NULL;
+	}
+	const char *mount_tag = globbuf.gl_pathv[0];
 	FILE *fd = fopen(mount_tag, "r");
 	if (!fd) {
 		warn(errno, "open '%s'", mount_tag);
