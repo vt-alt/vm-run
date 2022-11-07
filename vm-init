@@ -20,6 +20,9 @@ else
 	V() { "$@"; }
 fi
 
+SCRIPT=${cmdline#* SCRIPT=}
+SCRIPT=${SCRIPT%% *}
+
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
 
 if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
@@ -30,11 +33,10 @@ if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
 		V mount -t 9p -o "9p2000.L,trans=virtio,access=any,msize=262144" "$mount_tag" /mnt/9p
 		V mount --bind /mnt/9p/usr/src /usr/src
 		unset mount_tag mount_tag_f
+		[ "${SCRIPT#/usr/src/}" = "$SCRIPT" ] && SCRIPT="/mnt/9p$SCRIPT"
 	fi
 fi
 
-SCRIPT=${cmdline#* SCRIPT=}
-SCRIPT=${SCRIPT%% *}
 eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
 # Last MODPROBE_OPTIONS will win.
 export MODPROBE_OPTIONS
