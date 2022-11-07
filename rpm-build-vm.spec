@@ -167,10 +167,6 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 %_rpmlibdir/vm-run.filetrigger
 %_sysconfdir/bashrc.d/vm*.sh
 
-%post
-# Fix permissions to boot the installed kernel
-find /boot /lib/modules -type f,d \! -perm -444 -print0 | xargs -0r chmod a+rX
-
 %post run
 # Required in case of --udevd option to vm-run
 mkdir -p /run/udev
