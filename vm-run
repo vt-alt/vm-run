@@ -395,6 +395,7 @@ if [ -n "$ROOTFS" ]; then
 	OPTS+=" -drive file=$ROOTFS,format=raw"
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
 	MODULES+=" virtio-blk sd_mod ata_piix"
+	[ "$HOSTTYPE" = powerpc64le ] && MODULES+=" ibmvscsi"
 fi
 # We shall load these modules even though we're using ext4 for rootfe
 # (but supposedly we can mount 9p later and modprobe before that).
