@@ -108,7 +108,7 @@ at "/tmp/vm-ext4.img" out of your hasher root to run vm-run with it as rootfs.
 Summary: Checkinstall for vm-run
 Group: Development/Other
 BuildArch: noarch
-Requires(pre): %name = %EVR
+Requires(pre): %name-createimage = %EVR
 Requires(pre): time
 
 %description checkinstall
@@ -197,9 +197,15 @@ set -ex
 ls -l /dev/kvm
 set | grep ^LD_
 %endif
+
+# Simualte filetrigger run
+find /boot > /tmp/filelist
+%_rpmlibdir/posttrans-filetriggers /tmp/filelist
+
 timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 ! timeout --preserve-status 300 vm-run --verbose exit 1
+timeout 300 vm-run --rootfs --verbose df
 
 %ifarch %ix86 x86_64 ppc64le aarch64 armh
 %check
