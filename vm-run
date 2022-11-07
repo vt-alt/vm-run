@@ -140,6 +140,8 @@ if [ ! -t 0 ]; then
 	APPEND+=" NOTTY"
 fi
 
+# libfakeroot tries to communicate with faked and hangs.
+[ -v LD_PRELOAD ] && echo 'unset LD_PRELOAD' >> $SCRIPT
 # Prepare env
 [ $SBIN ] && echo "PATH=/sbin:/usr/sbin:\$PATH" >> $SCRIPT
 # Because 9p cannot handle redirection from deleted files and as
