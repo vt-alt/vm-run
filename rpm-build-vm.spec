@@ -183,6 +183,9 @@ chmod a+twx /run/dbus
 # u&mount should to be readable to use inside vm
 control mount unprivileged
 
+# Useful for enable audit for some kernel-modules tests
+[ ! -x /sbin/auditctl ] || chmod a+rx /sbin/auditctl
+
 # For --overlay=
 chmod a+twx /mnt
 

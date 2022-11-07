@@ -17,6 +17,3 @@ done
 
 # Fix permissions to boot the installed kernels
 find /boot /lib/modules -type f,d \! -perm -444 -print0 | xargs -0r chmod a+rX
-
-# Useful for enable audit for some kernel-modules tests
-[ ! -x /sbin/auditctl ] || chmod a+rx /sbin/auditctl
