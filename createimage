@@ -4,5 +4,4 @@
 [ -d /.host -a -d /.in -a -d /.out ] || exit 0
 
 vm-create-image --exclude='/tmp/*' --exclude='/.in/*' /tmp/vm-ext4.img
-chmod a+rw /tmp/vm-ext4.img
 exit 0
