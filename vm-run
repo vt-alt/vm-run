@@ -612,18 +612,7 @@ set +e
 # -device virtio-rng-pci  for virtio-rng
 (
 	# Provide more debugging info on qemu crashes.
-	if grep -sq systemd-coredump /proc/sys/kernel/core_pattern; then
-		ulimit -c unlimited
-	else
-		# Note: libSegFault mutes 'segfault' kernel message; also, it's support
-		# will be removed in next glibc (glibc-2.34.9000-495-g65ccd641ba).
-		VM_RUN_LIBSEGFAULT=$(set +f; echo /usr/lib*/libSegFault.so)
-		if [ -f "$VM_RUN_LIBSEGFAULT" ]; then
-			LD_PRELOAD=${LD_PRELOAD:+${LD_PRELOAD}:}$VM_RUN_LIBSEGFAULT
-			SEGFAULT_USE_ALTSTACK=1
-			export LD_PRELOAD SEGFAULT_USE_ALTSTACK
-		fi
-	fi
+	grep -sq systemd-coredump /proc/sys/kernel/core_pattern && ulimit -c unlimited
 	test "$NOCMD" || set -x
 	$TIME \
 	$QEMU \
