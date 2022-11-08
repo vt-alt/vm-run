@@ -31,9 +31,8 @@ if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
 		read mount_tag < $mount_tag_f
 		mkdir -p /mnt/9p
 		V mount -t 9p -o "9p2000.L,trans=virtio,access=any,msize=262144" "$mount_tag" /mnt/9p
-		V mount --bind /mnt/9p/usr/src /usr/src
 		unset mount_tag mount_tag_f
-		[ "${SCRIPT#/usr/src/}" = "$SCRIPT" ] && SCRIPT="/mnt/9p$SCRIPT"
+		SCRIPT="/mnt/9p$SCRIPT"
 	fi
 fi
 
@@ -44,6 +43,9 @@ export MODPROBE_OPTIONS
 if ! modprobe -q ext4 >/dev/null 2>&1; then
 	V /sbin/depmod
 fi
+
+# Additional early commands like 'mount --bind'.
+eval "$(grep -Pxo '#  CMD: \K.*' "$SCRIPT")"
 
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac

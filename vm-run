@@ -36,6 +36,7 @@ MULTIDEVS=remap
 MODULES=
 ROOTFS=
 ROOTFSCREATE=
+NOBIND=
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -66,6 +67,7 @@ usage() {
 	echo "    --kernel=        Kernel version to use (--kernels to list)"
 	echo "    --no-quiet       Do not boot kernel too quietly"
 	echo "Boot options:"
+	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
 	echo "    --sbin           Append sbin dirs to the PATH"
 	echo "    --udevd          Start udevd"
 	echo # Other options
@@ -116,6 +118,7 @@ for opt do
 		--create-rootfs=*) ROOTFS="${opt#*=}"; ROOTFSCREATE=y ;;
 		--rootfs=*)        ROOTFS="${opt#*=}" ;;
 		--rootfs)          ROOTFS="/tmp/vm-ext4.img" ;;
+		--no-bind)   NOBIND=y ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -409,6 +412,7 @@ if [ -n "$ROOTFS" ]; then
 	[ -w "$ROOTFSFILE" ] || OPTS+=",snapshot=on"
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
 	MODULES+=" virtio-blk"
+	[ -n "$NOBIND" ] || printf '#  CMD: V mount --bind /mnt/9p/usr/src /usr/src\n' >> $SCRIPT
 	unset FORMAT ROOTFSFILE
 fi
 # We shall load these modules even though we're using ext4 for rootfe
