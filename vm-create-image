@@ -18,6 +18,7 @@ show_usage()
 	echo "  --dir=         Dir to copy into image (default: /)"
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
+	echo "  --qcow2        After creation convert IMAGE to qcow2 format"
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
 	echo "                 Default when libfakeroot is loaded (as is under rooter)."
 	echo "  --size=        Size of image (Kb) (default: double of du of DIR)"
@@ -50,7 +51,7 @@ size=
 image=
 declare -i verbose=0
 fs_type=ext4
-unset ls_path cat_path stat_path
+unset ls_path cat_path stat_path qcow2
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
@@ -67,6 +68,7 @@ for opt; do
 		--ls=*)         ls_path=$arg ;;
 		--cat=*)        cat_path=$arg ;;
 		--stat=*)       stat_path=$arg ;;
+		--qcow2)        qcow2=y ;;
 		--special)      special=y ;;
 		--realuids)     realuids=y ;;
 		--no-realuids)  unset realuids ;;
@@ -197,3 +199,8 @@ sort "$TMP/hardlinks" \
 done
 } | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
 ($SETX; /sbin/e2fsck $VERBOSE -p "$image")
+if [ -v qcow2 ]; then
+	mv -f "$image" "$image.raw"
+	($SETX; qemu-img convert "$image.raw" "$image" -O qcow2)
+	rm "$image.raw"
+fi
