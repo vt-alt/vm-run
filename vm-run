@@ -392,10 +392,9 @@ if [ -n "$ROOTFS" ]; then
 		echo "Error: ext4 image '$ROOTFS' not found." >&2
 		exit 1
 	fi
-	OPTS+=" -drive file=$ROOTFS,format=raw"
+	OPTS+=" -drive file=$ROOTFS,format=raw,if=virtio"
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
-	MODULES+=" virtio-blk sd_mod ata_piix"
-	[ "$HOSTTYPE" = powerpc64le ] && MODULES+=" ibmvscsi"
+	MODULES+=" virtio-blk"
 fi
 # We shall load these modules even though we're using ext4 for rootfe
 # (but supposedly we can mount 9p later and modprobe before that).
