@@ -393,6 +393,7 @@ if [ -n "$ROOTFS" ]; then
 		exit 1
 	fi
 	OPTS+=" -drive file=$ROOTFS,format=raw,if=virtio"
+	[ -w "$ROOTFS" ] || OPTS+=",snapshot=on"
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
 	MODULES+=" virtio-blk"
 fi
