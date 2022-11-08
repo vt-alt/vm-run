@@ -44,8 +44,7 @@ fatal()
 	show_usage 1
 }
 
-# /tmp is on the same tmpfs so -xdev will not work.
-exclude="/tmp/*"
+exclude=()
 dir="/"
 size=
 image=
@@ -61,7 +60,7 @@ for opt; do
 	arg=${opt##*=}
 	case $opt in
 		--dir=*)        dir=$arg ;;
-		--exclude=*)    exclude=$arg ;;
+		--exclude=*)    exclude+=( "$arg" ) ;;
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
 		--fs=*)         fs_type=$arg ;;
@@ -98,8 +97,13 @@ elif [ -v stat_path ]; then
 	DEBUGFS_PAGER=cat /sbin/debugfs "$image" -R "stat $stat_path"
 	exit
 fi
+if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
+	# /tmp is on the same tmpfs so -xdev will not work.
+	exclude=( "/tmp/*" )
+fi
 if [ -z "$size" ]; then
-	total=$(command du -scx --exclude "$exclude" "$dir" 2>/dev/null | tail -1)
+	# shellcheck disable=SC2068
+	total=$(set -f; $SETX; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
 	total=${total%%[[:space:]]*}
 	size=$((total * 2))
 	[ "$size" -lt 10000 ] && size="10M"
@@ -137,9 +141,11 @@ set_metadata()
 
 >"$TMP/hardlinks"
 declare -i hl
-( $SETX
+( set -f
+  $SETX
+  # shellcheck disable=SC2068
   find "$dir" -xdev \
-	 -not -path "$exclude" \
+	 ${exclude[@]/#/-not -path } \
 	 -not -samefile "$image" \
 	 -not -samefile "$dir" \
 	 -printf '%D:%i %n %y %m %U %G %T@ %P\n'
