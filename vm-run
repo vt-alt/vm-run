@@ -387,15 +387,28 @@ fi
 
 if [ -n "$ROOTFS" ]; then
 	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFS"
-	eval "$(/sbin/blkid -o export -- "$ROOTFS")"
-	if [[ ! "${TYPE-}" =~ ^ext[234]$ ]]; then
-		echo "Error: ext4 image '$ROOTFS' not found." >&2
+	FORMAT=$(qemu-img info "$ROOTFS" | grep -Po 'file format: \K.*')
+	if [ "$FORMAT" = "qcow2" ]; then
+		tmpfile=$(mktemp)
+		qemu-img dd if="$ROOTFS" of="$tmpfile" count=4
+		eval "$(/sbin/blkid -o export -- "$tmpfile")"
+		rm $tmpfile
+	elif [ "$FORMAT" = "raw" ]; then
+		eval "$(/sbin/blkid -o export -- "$ROOTFS")"
+	else
+		echo "Error: Image '$ROOTFS' in unsupported format '$FORMAT'."
 		exit 1
 	fi
-	OPTS+=" -drive file=$ROOTFS,format=raw,if=virtio"
+	if [[ ! "${TYPE-}" =~ ^ext[234]$ ]]; then
+		echo "Error: ext4 filesystem not found in '$ROOTFS'." >&2
+		exit 1
+	fi
+	OPTS+=" -drive file=$ROOTFS,if=virtio"
+	[ "$FORMAT" = "raw" ] && OPTS+=",format=raw"
 	[ -w "$ROOTFS" ] || OPTS+=",snapshot=on"
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
 	MODULES+=" virtio-blk"
+	unset FORMAT
 fi
 # We shall load these modules even though we're using ext4 for rootfe
 # (but supposedly we can mount 9p later and modprobe before that).
