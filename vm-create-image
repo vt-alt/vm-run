@@ -78,11 +78,6 @@ for opt; do
 done
 [ -n "$image" ] || fatal "Specifying IMAGE is required."
 
-if [ "${realuids-}" = 'n' ]; then
-	unset realuids
-	error "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
-fi
-
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
@@ -108,6 +103,12 @@ if [ -z "$size" ]; then
 	size=$((total * 2))
 	[ "$size" -lt 10000 ] && size="10M"
 fi
+
+if [ "${realuids-}" = 'n' ]; then
+	unset realuids
+	error "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
+fi
+
 [ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
 	${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
 rm -f "$image"
