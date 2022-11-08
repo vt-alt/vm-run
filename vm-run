@@ -387,7 +387,7 @@ fi
 
 if [ -n "$ROOTFS" ]; then
 	ROOTFSFILE=${ROOTFS%,*}
-	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE"
+	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2)
 	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po 'file format: \K.*')
 	if [ "$FORMAT" = "qcow2" ]; then
 		tmpfile=$(mktemp)
