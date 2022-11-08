@@ -217,7 +217,7 @@ ls -l /dev/kvm && test -w /dev/kvm
 * Mon Nov 07 2022 Vitaly Chikunov <vt@altlinux.org> 1.36-alt1
 - Add vm-create-image tool that can generate ext4 image out of hasher root.
 - vm-run: Support for booting from ext4 image using --rootfs=
-  (or --create-rootfs=) option(s). This way you have rull root access to the
+  (or --create-rootfs=) option(s). This way you have full root access to the
   system tree.
   Note that 9p is still (bind) mounted over '/usr/src', so you can place your
   test artifacts there.
