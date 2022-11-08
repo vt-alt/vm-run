@@ -135,6 +135,7 @@ set_metadata()
 	[ "$ty" = "010" ] || printf 'sif "%s" mode %03o%04o\n' "$f" "$ty" "0$md"
 }
 
+>"$TMP/hardlinks"
 declare -i hl
 ( $SETX
   find "$dir" -xdev \
