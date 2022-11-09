@@ -37,6 +37,7 @@ MODULES=
 ROOTFS=
 ROOTFSCREATE=
 NOBIND=
+DRIVE_IF=virtio
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -119,6 +120,8 @@ for opt do
 		--rootfs=*)        ROOTFS="${opt#*=}" ;;
 		--rootfs)          ROOTFS="/tmp/vm-ext4.img" ;;
 		--no-bind)   NOBIND=y ;;
+		--no-virtio) DRIVE_IF= ;;
+		--scsi)      DRIVE_IF=scsi ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -407,11 +410,24 @@ if [ -n "$ROOTFS" ]; then
 		echo "Error: ext4 filesystem not found in '$ROOTFSFILE'." >&2
 		exit 1
 	fi
-	OPTS+=" -drive file=$ROOTFS,if=virtio"
+	OPTS+=" -drive file=$ROOTFS"
 	[ "$FORMAT" = "raw" ] && OPTS+=",format=raw"
 	[ -w "$ROOTFSFILE" ] || OPTS+=",snapshot=on"
+	case "$DRIVE_IF" in
+		virtio)
+			OPTS+=",if=virtio"
+			MODULES+=" virtio_blk"
+			;;
+		scsi)
+			OPTS+=",if=none,id=sd0 -device virtio-scsi-pci -device scsi-hd,drive=sd0"
+			MODULES+=" virtio_scsi sd_mod"
+			;;
+		'')
+			MODULES+=" sd_mod ata_piix"
+			[ "$HOSTTYPE" = powerpc64le ] && MODULES+=" ibmvscsi"
+			;;
+	esac
 	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
-	MODULES+=" virtio-blk"
 	[ -n "$NOBIND" ] || printf '#  CMD: V mount --bind /mnt/9p/usr/src /usr/src\n' >> $SCRIPT
 	unset FORMAT ROOTFSFILE
 fi
