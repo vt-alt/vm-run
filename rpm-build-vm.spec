@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.36
+Version: 1.37
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -209,6 +209,15 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Wed Nov 09 2022 Vitaly Chikunov <vt@altlinux.org> 1.37-alt1
+- Add more rootfs boot testing options (--no-virtio, --scsi). Note: they will
+  not work on all architectures equally.
+- Add --sudo option (making fake sudo work inside rootfs vm). Requires and
+  enables rootfs mode.
+- Add --user option to run vm commands under builder instead of root (implies
+  --sudo and sudo use).
+- Both above options auto-create rootfs if it does not exist.
+
 * Mon Nov 07 2022 Vitaly Chikunov <vt@altlinux.org> 1.36-alt1
 - Add vm-create-image tool that can generate ext4 image out of hasher root.
 - vm-run: Support for booting from ext4 image using --rootfs=
