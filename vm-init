@@ -169,6 +169,10 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 done
 unset ov_count img_count prev_cmdline
 
+if [ -n "$FAKESUDO" ]; then
+	V install -pm4755 /usr/lib/vm-run/vm-fakesudo /usr/bin/sudo
+fi
+
 [ -n "${cmdline/* NOTTY *}" ] && vm-resize ${V:--q}
 
 CONSOLE=${cmdline#console=}

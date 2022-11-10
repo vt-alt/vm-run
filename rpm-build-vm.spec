@@ -135,6 +135,7 @@ install -D -p -m 0755 vm-run      %buildroot%_bindir/vm-run
 install -D -p -m 0755 vm-create-image %buildroot%_bindir/vm-create-image
 install -D -p -m 0755 vm-init     %buildroot%_libexecdir/vm-run/vm-init
 install -D -p -m 0755 initrd-init %buildroot%_libexecdir/vm-run/initrd-init
+install -D -p -m 0755 fakesudo    %buildroot%_libexecdir/vm-run/vm-fakesudo
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
 install -D -p -m 0755 createimage %buildroot%_rpmlibdir/z-vm-createimage.filetrigger
 install -Dp bash_completion %buildroot%_sysconfdir/bashrc.d/vm_completion.sh

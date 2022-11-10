@@ -1,4 +1,6 @@
-CFLAGS += -static -Wl,-z,noexecstack -Wall -Werror -fanalyzer
+CC = gcc
+CFLAGS += -Wall -Werror -fanalyzer
+CFLAGS_STATIC += -static -Wl,-z,noexecstack $(CFLAGS)
 LDLIBS += $(shell pkg-config --libs --static blkid)
 
 scripts = \
@@ -11,10 +13,14 @@ scripts = \
 	createimage \
 	bash_completion
 
+all: initrd-init fakesudo
 initrd-init: initrd-init.c
+	$(CC) $(CFLAGS_STATIC) $^ $(LDLIBS) -o $@
+fakesudo: fakesudo.c
+	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	-rm -f initrd-init *.o
+	-rm -f initrd-init fakesudo *.o
 
 check: $(scripts)
 	$(foreach f,$^,bash -n $(f);)
