@@ -62,6 +62,7 @@ static void xerrno(int err, const char *fmt, ...)
 
 	sleep(1);
 	reboot(RB_POWER_OFF);
+	exit(1);
 }
 
 static void modprobe(void)
