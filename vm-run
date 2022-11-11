@@ -600,10 +600,10 @@ if [ ! -f "${INITRD-}" ]; then
 		exit 1
 	fi
 	while read skip f; do
-		[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
 		bn=${f##*/}
 		un=${bn%.?z}
 		[ -e "$CPIO/$un" ] && continue
+		[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
 		cp -au "$f" "$CPIO/" 2>/dev/null || continue
 		case "$bn" in
 			*.gz) gzip -qd "$CPIO/$bn" ;;
