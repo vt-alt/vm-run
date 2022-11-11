@@ -59,8 +59,9 @@ usage() {
        	echo "                     Auto create overlay FS over PATH"
 	echo "    --qemu='...'     Pass additional options to qemu"
 	echo "    --rootfs=IMAGE   Use existing ext4 IMAGE for rootfs instead of 9p"
-	echo "                     To generate new image use --create-rootfs=IMAGE"
+	echo "                     To generate new image each time use --create-rootfs=IMAGE"
 	echo "                     or vm-create-image tool."
+	echo "    --rootfs         As above, but use default image '/tmp/vm-ext4.img'"
 	echo "    --secureboot     Use OVMF SecureBoot fw (alias --bios=secureboot)"
 	echo "    -s, --silent     Do not show qemu command"
 	echo "    --tcg            Do not try to enable KVM"
@@ -73,7 +74,7 @@ usage() {
 	echo "Boot options:"
 	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
 	echo "    --sbin           Append sbin dirs to the PATH"
-	echo "    --sudo           Install fake sudo into rootfs (implies --rootfs)"
+	echo "    --sudo           Install fake sudo into rootfs (implies creation of rootfs)"
 	echo "    --user           Run under user instead of root (implies --sudo)"
 	echo "    --udevd          Start udevd"
 	echo # Other options
@@ -406,13 +407,14 @@ fi
 if [ -n "$FAKESUDO" ]; then
 	if [ -z "$ROOTFS" ]; then
 		ROOTFS=$ROOTFS_DEF_IMAGE
-		[ -e "$ROOTFS" ] || ROOTFSCREATE=auto
+		ROOTFSCREATE=auto
 	fi
 	printf '#  CMD: FAKESUDO=y\n' >> $SCRIPT
 fi
 
 if [ -n "$ROOTFS" ]; then
 	ROOTFSFILE=${ROOTFS%,*}
+	[ "$ROOTFSCREATE" = "auto" ] && [ -e "$ROOTFS" ] && ROOTFSCREATE=
 	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2)
 	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po 'file format: \K.*')
 	if [ "$FORMAT" = "qcow2" ]; then
