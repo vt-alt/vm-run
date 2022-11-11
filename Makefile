@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS += -Wall -Werror -fanalyzer
-CFLAGS_STATIC += -static -Wl,-z,noexecstack $(CFLAGS)
+CFLAGS_STATIC += -static $(CFLAGS)
 LDLIBS += $(shell pkg-config --libs --static blkid)
 
 scripts = \

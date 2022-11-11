@@ -22,12 +22,7 @@
 #include <unistd.h>
 #include <blkid/blkid.h>
 
-#ifdef __KLIBC__
-extern long init_module(void *, unsigned long, const char *);
-# define reboot(flag) reboot(flag, NULL)
-#else
 # define init_module(image, len, param) syscall(__NR_init_module, image, len, param)
-#endif
 
 static char *newroot = "/newroot";
 static char *modules = "modules.conf";
