@@ -40,6 +40,7 @@ ROOTFSCREATE=
 NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
+RUNUSER=
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -73,6 +74,7 @@ usage() {
 	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
 	echo "    --sbin           Append sbin dirs to the PATH"
 	echo "    --sudo           Install fake sudo into rootfs (implies --rootfs)"
+	echo "    --user           Run under user instead of root (implies --sudo)"
 	echo "    --udevd          Start udevd"
 	echo # Other options
 	echo "    -h, --help       This help"
@@ -126,6 +128,7 @@ for opt do
 		--no-virtio) DRIVE_IF= ;;
 		--scsi)      DRIVE_IF=scsi ;;
 		--sudo)      FAKESUDO=y ;;
+		--user)      RUNUSER=builder ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -393,6 +396,11 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 		echo "Warning: To use share_network inside vm-run you may" >&2
 		echo "  need to hsh-install iproute2 or net-tools" >&2
 	fi
+fi
+
+if [ -n "$RUNUSER" ]; then
+	printf "#  CMD: RUNUSER=$RUNUSER\n" >> $SCRIPT
+	FAKESUDO=y
 fi
 
 if [ -n "$FAKESUDO" ]; then
