@@ -141,8 +141,8 @@ install -D -p -m 0755 fakesudo    %buildroot%_libexecdir/vm-run/vm-fakesudo
 install -D -p -m 0755 filetrigger %buildroot%_rpmlibdir/vm-run.filetrigger
 install -D -p -m 0755 createimage %buildroot%_rpmlibdir/z-vm-createimage.filetrigger
 install -Dp bash_completion %buildroot%_sysconfdir/bashrc.d/vm_completion.sh
-%endif
 install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
+%endif
 
 %pre run
 # Only allow to install inside of hasher.
@@ -162,9 +162,9 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 
 %files run
 %_bindir/vm-run
-%_bindir/vm-resize
 
 %ifarch %supported_arches
+%_bindir/vm-resize
 %_bindir/vm-create-image
 %_libexecdir/vm-run
 %_rpmlibdir/vm-run.filetrigger
