@@ -117,9 +117,9 @@ Run checkinstall tests for vm-run.
 %build
 %{?optflags_lto:%global optflags_lto %optflags_lto -ffat-lto-objects}
 CFLAGS="%optflags" make
-%endif
 
 make check
+%endif
 
 %install
 %ifnarch %supported_arches
