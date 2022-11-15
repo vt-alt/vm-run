@@ -202,7 +202,7 @@ timeout 300 vm-run --verbose --overlay=ext4 uname -a
 ! timeout --preserve-status 300 vm-run --verbose exit 1
 timeout 300 vm-run --rootfs --verbose df
 
-%ifarch %ix86 x86_64 ppc64le aarch64 armh
+%ifarch %supported_arches
 %check
 # Verify availability of KVM in girar & beehiver.
 ls -l /dev/kvm && test -w /dev/kvm
