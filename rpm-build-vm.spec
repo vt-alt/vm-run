@@ -18,8 +18,11 @@ Source: %name-%version.tar
 %ifarch %supported_arches
 BuildRequires: glibc-devel-static
 BuildRequires: libblkid-devel-static
-# For %%check.
+# For %%check. This does not verify the package but verifies
+# that girar on supported_arches have writable /dev/kvm
+# This should run even if check is disabled.
 BuildRequires: /dev/kvm
+# shellchek is used in %%build as pre-install syntax check.
 BuildRequires: shellcheck
 
 # Try to load un-def kernel this way to avoid "forbidden dependencies"
@@ -118,7 +121,12 @@ Run checkinstall tests for vm-run.
 %{?optflags_lto:%global optflags_lto %optflags_lto -ffat-lto-objects}
 CFLAGS="%optflags" make
 
+# This is pre-install syntax check for bash scripts. This does not
+# run any functional tests.
 make check
+%else
+# Still useful to verify stub script even in absence of shellcheck.
+bash -n vm-run
 %endif
 
 %install
