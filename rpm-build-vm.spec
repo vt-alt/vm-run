@@ -5,7 +5,7 @@
 
 Name: rpm-build-vm
 Version: 1.37
-Release: alt1
+Release: alt2
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -209,6 +209,9 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Tue Nov 15 2022 Vitaly Chikunov <vt@altlinux.org> 1.37-alt2
+- spec: Do not run make check on e2k.
+
 * Wed Nov 09 2022 Vitaly Chikunov <vt@altlinux.org> 1.37-alt1
 - Add more rootfs boot testing options (--no-virtio, --scsi). Note: they will
   not work on all architectures equally.
