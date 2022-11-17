@@ -274,6 +274,7 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-x86_64
+		MAXCPU=255
 		EDK2=/usr/share/OVMF
 		EFI_CODE=OVMF_CODE.fd
 		SB_PFLASH="OVMF_CODE.secboot.fd OVMF_VARS.secboot.fd"
