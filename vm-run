@@ -117,7 +117,7 @@ for opt do
 		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
-		--cpu=*)     NPROC="${opt#*=}" ;;
+		--cpu=*)     NPROCS="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
@@ -377,12 +377,12 @@ if [ $M -ge 256 ]; then
         DEF+=" -m ${M}M"
 fi
 
-[ -v NPROC ] || NPROC=$(nproc)
-if [ "$NPROC" -gt 1 ]; then
-	if [ "$MAXCPU" ] && [ "$NPROC" -gt "$MAXCPU" ]; then
-		NPROC=$MAXCPU
+[ -v NPROCS ] || NPROCS=$(nproc)
+if [ "$NPROCS" -gt 1 ]; then
+	if [ "$MAXCPU" ] && [ "$NPROCS" -gt "$MAXCPU" ]; then
+		NPROCS=$MAXCPU
 	fi
-	DEF+=" -smp cores=$NPROC"
+	DEF+=" -smp cores=$NPROCS"
 fi
 
 # Enable sandbox
