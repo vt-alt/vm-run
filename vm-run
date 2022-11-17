@@ -41,6 +41,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
+unset NRCPU
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -117,7 +118,7 @@ for opt do
 		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
-		--cpu=*)     NPROCS="${opt#*=}" ;;
+		--cpu=*)     NRCPU="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
@@ -319,6 +320,7 @@ elif [ -e /usr/share/qemu/bios.bin ]; then
 	OPTS+=" -bios bios.bin"
 fi
 
+unset NOKVM
 if kvm_need; then
 	case "$KVM" in
 		try|detect)
@@ -326,7 +328,7 @@ if kvm_need; then
 			#   Could not access KVM kernel module: No such file or directory
 			#   qemu-system-x86_64: failed to initialize kvm: No such file or directory
 			#   qemu-system-x86_64: falling back to tcg
-			kvm_ok && DEF+=" -M accel=kvm:tcg" || DEF+=" -M accel=tcg"
+			kvm_ok && DEF+=" -M accel=kvm:tcg" || { DEF+=" -M accel=tcg"; NOKVM=y; }
 			;;
 		cond|if)
 			if ! kvm_ok; then
@@ -351,6 +353,7 @@ if kvm_need; then
 else
 	# Forcefully disable KVM.
 	DEF+=" -accel tcg"
+	NOKVM=y
 fi
 unset KVM
 
@@ -377,12 +380,19 @@ if [ $M -ge 256 ]; then
         DEF+=" -m ${M}M"
 fi
 
-[ -v NPROCS ] || NPROCS=$(nproc)
-if [ "$NPROCS" -gt 1 ]; then
-	if [ "$MAXCPU" ] && [ "$NPROCS" -gt "$MAXCPU" ]; then
-		NPROCS=$MAXCPU
+if [ -v NRCPU ]; then
+	# What user requested explicitly.
+	DEF+=" -smp cores=$NRCPU"
+else
+	# No point to set cpu count to host nproc value if there is no kvm support,
+	# or this will cause long (lpj=) calibration delays.
+	[ -v NOKVM ] && [ "${MAXCPU:-0}" -gt 4 ] && MAXCPU=4
+
+	[ -v NPROCS ] || NPROCS=$(nproc)
+	if [ "$NPROCS" -gt 1 ]; then
+		[ -n "$MAXCPU" ] && [ "$NPROCS" -gt "$MAXCPU" ] && NPROCS=$MAXCPU
+		DEF+=" -smp cores=$NPROCS"
 	fi
-	DEF+=" -smp cores=$NPROCS"
 fi
 
 # Enable sandbox
