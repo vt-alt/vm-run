@@ -391,9 +391,13 @@ else
 
 	[ -v NPROCS ] || NPROCS=$(nproc)
 	if [ "$NPROCS" -gt 1 ]; then
+		declare -i nprocs_macro=$(rpm --eval '%__nprocs')
+		[ -n "$nprocs_macro" ] && [ "$NPROCS" -gt "$nprocs_macro" ] && NPROCS=$nprocs_macro
 		[ -n "$MAXCPU" ] && [ "$NPROCS" -gt "$MAXCPU" ] && NPROCS=$MAXCPU
 		DEF+=" -smp cores=$NPROCS"
+		unset nprocs_macro
 	fi
+	unset NPROCS
 fi
 
 # Enable sandbox
