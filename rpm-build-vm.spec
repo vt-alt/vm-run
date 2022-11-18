@@ -4,8 +4,8 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.37
-Release: alt3
+Version: 1.38
+Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -217,6 +217,10 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Fri Nov 18 2022 Vitaly Chikunov <vt@altlinux.org> 1.38-alt1
+- Limit maximum CPU to 4 if there's no KVM.
+- Add NPROCS/--nprocs support.
+
 * Thu Nov 17 2022 Nikolai Kostrigin <nickel@altlinux.org> 1.37-alt3
 - vm-run: Define MAXCPU=255 for x86_64 (closes: #44337).
 
