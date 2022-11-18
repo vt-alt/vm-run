@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 		int ch;
 
 		if ((ch = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
+			char hn[HOST_NAME_MAX] = {};
 			switch (ch) {
 			case 'P':
 				preserve_groups = 1;
@@ -116,7 +117,6 @@ int main(int argc, char **argv)
 				printf("fakesudo: you are not permitted to use the -%c option\n", ch);
 				exit(1);
 			case 'l':
-				char hn[HOST_NAME_MAX] = {};
 				gethostname(hn, sizeof hn);
 				printf("User %s may run the following commands on %s:\n", me->pw_name, hn);
 				printf("    (ALL) NOPASSWD: ALL\n");
