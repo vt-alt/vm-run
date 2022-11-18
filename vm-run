@@ -116,6 +116,7 @@ for opt do
 		--blockdev=*)OPTS+=" -blockdev ${opt#*=}" ;;
 		--netdev=*)  OPTS+=" -netdev ${opt#*=}" ;;
 		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
+		--snapshot)  OPTS+=" -snapshot" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     NRCPU="${opt#*=}" ;;
