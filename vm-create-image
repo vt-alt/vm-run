@@ -98,14 +98,29 @@ if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
 	# /tmp is on the same tmpfs so -xdev will not work.
 	exclude=( "/tmp/*" )
 fi
-if [ -z "$size" ]; then
-	# shellcheck disable=SC2068
-	total=$(set -f; $SETX; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
-	total=${total%%[[:space:]]*}
-	size=$((total * 2))
-	[ "$size" -lt 10000 ] && size="10M"
-fi
-
+# shellcheck disable=SC2068
+total=$(set -f; $SETX; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
+total=${total%%[[:space:]]*}
+unit=1024
+shopt -s nocasematch
+case "$size" in
+	*B) unit=1/$unit ;;
+	*K | *[0-9]) unit=1 ;;
+	*M) unit=$((unit*unit)) ;;
+	*G) unit=$((unit*unit*unit)) ;;
+	*T) unit=$((unit*unit*unit*unit)) ;;
+	*[A-Z]) fatal "Unknown unit size: $size" ;;
+esac
+shopt -u nocasematch
+sz=${size%[BKMGTbkmgt]}
+case "$sz" in
+	+*)   size=$((total + ${sz#+} * $unit)) ;;
+	*%)   size=$((total * ${sz%'%'} / 100)) ;;
+	'*'*) size=$((total * ${sz#'*'})) ;;
+	'')   size=$((total * 3)) ;;
+	*)    size=$((sz * $unit)) ;;
+esac
+unset unit sz
 if [ "${realuids-}" = 'n' ]; then
 	unset realuids
 	error "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
