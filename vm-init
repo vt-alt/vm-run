@@ -116,6 +116,16 @@ if [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 	network_conf $(grep -E -vw 'Inter-|face|lo:' /proc/net/dev | head -1 | cut -d: -f1 | tr -d ' ')
 fi
 
+if [ -n "$RESIZE2FS" ]; then
+	RESIZE2FS=$(blkid --uuid "$RESIZE2FS")
+	if [ -n "$V" ]; then
+		V resize2fs -p "$RESIZE2FS"
+	else
+		resize2fs "$RESIZE2FS" >/dev/null 2>&1
+	fi
+	unset RESIZE2FS
+fi
+
 # Handle --overlay option
 UMOUNT=
 ov_count=0

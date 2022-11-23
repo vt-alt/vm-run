@@ -134,6 +134,7 @@ for opt do
 		--scsi)      DRIVE_IF=scsi ;;
 		--sudo)      FAKESUDO=y ;;
 		--user)      RUNUSER=builder ;;
+		--no-snapshot) NOSNAPSHOT= ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -431,10 +432,11 @@ if [ -n "$FAKESUDO" ]; then
 fi
 
 if [ -n "$ROOTFS" ]; then
-	ROOTFSFILE=${ROOTFS%,*}
+	ROOTFSFILE=${ROOTFS%%,*}
+	ROOTFSOPTS=${ROOTFS#"$ROOTFSFILE"}
 	[ "$ROOTFSCREATE" = "auto" ] && [ -e "$ROOTFS" ] && ROOTFSCREATE=
 	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2)
-	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po 'file format: \K.*')
+	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po '^file format: \K.*')
 	if [ "$FORMAT" = "qcow2" ]; then
 		tmpfile=$(mktemp)
 		qemu-img dd if="$ROOTFSFILE" of="$tmpfile" count=4
@@ -450,9 +452,29 @@ if [ -n "$ROOTFS" ]; then
 		echo "Error: ext4 filesystem not found in '$ROOTFSFILE'." >&2
 		exit 1
 	fi
-	OPTS+=" -drive file=$ROOTFS"
+	OPTS+=" -drive file=$ROOTFSFILE"
+	if [ ! -w "$ROOTFSFILE" ]; then
+		if [ -v NOSNAPSHOT ]; then
+			# Create user-writable qcow2 image over non-writable one created by rooter.
+			# Filename integrates fs UUID, so in case it's regenerated after hsh-install
+			# it will be created again.
+			# As a hack SIZE can be passed externally via NOSNAPSHOT= env, resize2fs will
+			# be called inside vm.
+			_EXT=".$UUID.qcow2"
+			if [ ! -e "$ROOTFS$_EXT" ]; then
+				[ -n "$VERBOSE" ] && echo >&2 "Creating writable overlay qcow2 image."
+				qemu-img create -b "$ROOTFSFILE" -F "$FORMAT" -f qcow2 "$ROOTFS$_EXT" $NOSNAPSHOT
+				[ -n "$NOSNAPSHOT" ] && printf "#  CMD: RESIZE2FS=$UUID\n" >> $SCRIPT
+			fi
+			OPTS+="$_EXT"
+			FORMAT=qcow2
+			unset _EXT
+		else
+			OPTS+=",snapshot=on"
+		fi
+	fi
+	OPTS+="$ROOTFSOPTS"
 	[ "$FORMAT" = "raw" ] && OPTS+=",format=raw"
-	[ -w "$ROOTFSFILE" ] || OPTS+=",snapshot=on"
 	case "$DRIVE_IF" in
 		virtio)
 			OPTS+=",if=virtio"
