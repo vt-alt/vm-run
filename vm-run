@@ -135,6 +135,7 @@ for opt do
 		--sudo)      FAKESUDO=y ;;
 		--user)      RUNUSER=builder ;;
 		--no-snapshot) NOSNAPSHOT= ;;
+		--hvc)       HVC=y ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -500,6 +501,17 @@ fi
 # from 9p:/, thus 9p modules should be already loaded.
 MODULES+=" 9p 9pnet_virtio"
 
+if [ -n "${HVC-}" ]; then
+	CONSOLE=hvc0
+	MODULES+=" virtio_console"
+	# It seems 'signal=off' handles ^C differently than '-serial mon:stdio'.
+	# For example, "vm-run --hvc cat /dev/zero | pv >/dev/null" is not stoppable
+	# with ^C when 'signal=off' (you still can stop it with ^A x).
+	DEF+=" -device virtio-serial-$VIRTIOBUS -device virtconsole,chardev=con -chardev stdio,mux=on,signal=off,id=con -mon chardev=con"
+else
+	DEF+=" -serial mon:stdio"
+fi
+
 # Sorted by preference (%buildroot first) and mtime (newer first)
 list_kernels() {
 	(
@@ -705,7 +717,6 @@ set +e
 		-fsdev local,id=root,path=/,security_model=none,multidevs=$MULTIDEVS \
 		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=virtio-9p:/ \
 		-device virtio-rng-$VIRTIOBUS \
-		-serial mon:stdio \
 		-kernel $KERNEL \
 		-initrd $INITRD \
 		$OPTS \
