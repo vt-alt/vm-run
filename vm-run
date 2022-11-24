@@ -154,10 +154,10 @@ if [ $(env - whoami) = root ]; then
 	exit
 fi
 
-# Signal to vm-init that we don't have tty on stdin,
+# Signal to vm-init that we don't have tty on stdio,
 # so it will not try to determine terminal size
-if [ ! -t 0 ]; then
-	APPEND+=" NOTTY"
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+	printf "#  CMD: NOTTY=y\n" >> $SCRIPT
 fi
 
 # libfakeroot tries to communicate with faked and hangs.

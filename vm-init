@@ -186,7 +186,7 @@ if [ -n "$RUNUSER" ]; then
 	RUNUSER="/usr/lib/vm-run/vm-fakesudo -u $RUNUSER -i exec"
 fi
 
-[ -n "${cmdline/* NOTTY *}" ] && vm-resize ${V:--q}
+[ -z "$NOTTY" ] && V vm-resize ${V:--q}
 
 CONSOLE=${cmdline#console=}
 CONSOLE=${CONSOLE%% *}
