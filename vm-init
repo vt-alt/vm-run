@@ -126,6 +126,10 @@ if [ -n "$RESIZE2FS" ]; then
 	unset RESIZE2FS
 fi
 
+if [ -n "$RSYNC" ]; then
+	V rsync -a $V ${RSYNC//:/ }
+fi
+
 # Handle --overlay option
 UMOUNT=
 ov_count=0

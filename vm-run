@@ -41,7 +41,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU
+unset NRCPU RSYNC
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -52,6 +52,7 @@ usage() {
 	echo "    --cpu=           Pass '-smp ...' to qemu (cpus)"
 	echo "    --drive=         Shortcut to pass '-drive file=' to qemu"
 	echo "    --fat=DIR        Shortcut to pass DIR as rw FAT partition"
+	echo "    --hvc            Enable high speed serial virtconsole"
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
 	echo "    --mem=           Pass '-m ...' to qemu (memory size)"
 	echo "    --microvm        Use microvm machine type"
@@ -76,6 +77,7 @@ usage() {
 	echo "    --no-quiet       Do not boot kernel too quietly"
 	echo "Boot options:"
 	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
+	echo "    --rsync=DIR      rsync DIR over rootfs (for %buildroot)"
 	echo "    --sbin           Append sbin dirs to the PATH"
 	echo "    --sudo           Install fake sudo into rootfs (implies creation of rootfs)"
 	echo "    --user           Run under user instead of root (implies --sudo)"
@@ -136,6 +138,7 @@ for opt do
 		--user)      RUNUSER=builder ;;
 		--no-snapshot) NOSNAPSHOT= ;;
 		--hvc)       HVC=y ;;
+		--rsync=*)   RSYNC="${opt#*=}" ;;
 		--) break ;;
 		-*) echo "Unknown option $opt $*" >&2; usage ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -419,17 +422,30 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 	fi
 fi
 
+if [ -v RSYNC ]; then
+	if type -p rsync >/dev/null; then
+		[[ "$RSYNC" =~ : ]] || RSYNC+=:/
+		printf "#  CMD: RSYNC=%q\n" "$RSYNC" >> $SCRIPT
+		IMPLYROOTFS=y
+	else
+		echo "Error: rsync binary not found." >&2
+		exit 1
+	fi
+fi
+
 if [ -n "$RUNUSER" ]; then
 	printf "#  CMD: RUNUSER=$RUNUSER\n" >> $SCRIPT
 	FAKESUDO=y
 fi
 
 if [ -n "$FAKESUDO" ]; then
-	if [ -z "$ROOTFS" ]; then
-		ROOTFS=$ROOTFS_DEF_IMAGE
-		ROOTFSCREATE=auto
-	fi
 	printf '#  CMD: FAKESUDO=y\n' >> $SCRIPT
+	IMPLYROOTFS=y
+fi
+
+if [ -n "${IMPLYROOTFS-}" ] && [ -z "$ROOTFS" ]; then
+	ROOTFS=$ROOTFS_DEF_IMAGE
+	ROOTFSCREATE=auto
 fi
 
 if [ -n "$ROOTFS" ]; then
