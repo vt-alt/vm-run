@@ -58,6 +58,18 @@ fi
 
 V mount -t tmpfs tmpfs /var/log
 V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
+
+CONSOLE=${cmdline#console=}
+CONSOLE=${CONSOLE%% *}
+if [ -c /dev/"$CONSOLE" ]; then
+	exec 0<>/dev/"$CONSOLE" 1>&0 2>&0
+elif [ -c /dev/console ]; then
+	exec 0<>/dev/console 1>&0 2>&0
+else
+	# Visible if /dev is inaccessible.
+	echo "vm-init: console=$CONSOLE is not accessible."
+fi
+
 install -g utmp -m660 /dev/null /var/log/btmp
 install -g utmp -m664 /dev/null /var/log/wtmp
 
@@ -192,8 +204,6 @@ fi
 
 [ -z "$NOTTY" ] && V vm-resize ${V:--q}
 
-CONSOLE=${cmdline#console=}
-CONSOLE=${CONSOLE%% *}
 if [ -f "$SCRIPT" ]; then
 	set -- $SCRIPT
 else
@@ -202,13 +212,7 @@ else
 	export PS1='(rescue)# '
 	set -- /bin/bash
 fi
-# Try to run even if we don't have /dev.
-if [ -e /dev/"$CONSOLE" ]; then
-	$RUNUSER setsid --ctty --wait "$@" 0<>/dev/"$CONSOLE" 1>&0 2>&0
-else
-	echo "vm-init: console=$CONSOLE is not accessible."
-	$RUNUSER setsid --ctty --wait "$@" 2>&1
-fi
+$RUNUSER setsid --ctty --wait "$@"
 RET=$?
 # TODO: We can miss some stderr output here, for example script is not
 # executable due to incorrect TMPDIR.
