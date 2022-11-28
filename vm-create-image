@@ -99,8 +99,9 @@ if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
 	exclude=( "/tmp/*" )
 fi
 # shellcheck disable=SC2068
-total=$(set -f; $SETX; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
+total=$(set -f; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
 total=${total%%[[:space:]]*}
+[ $verbose -gt 0 ] && echo >&2 "Source directory='$dir' size=$total kb"
 unit=1024
 shopt -s nocasematch
 case "$size" in
@@ -120,6 +121,7 @@ case "$sz" in
 	'')   size=$((total * 3)) ;;
 	*)    size=$((sz * $unit)) ;;
 esac
+[ "$size" -lt 10000 ] && size="10M"
 unset unit sz
 if [ "${realuids-}" = 'n' ]; then
 	unset realuids
