@@ -34,16 +34,18 @@ show_usage()
 	exit "$@"
 }
 
-error()
+warning()
 {
-	echo >&2 "$(basename "$0"): $*"
+	local w prefix="$(basename "$0"): "
+	for w do
+		echo >&2 "$prefix$w"
+		prefix=
+	done
 }
-
 fatal()
 {
-	error "$@"
-	echo
-	show_usage 1
+	warning "$@"
+	exit 1
 }
 
 exclude=()
@@ -80,7 +82,7 @@ for opt; do
 		*)              set -- "$@" "$opt" ;;
 	esac
 done
-[ -n "${1-}" ] || fatal "Specifying IMAGE is required."
+[ -n "${1-}" ] || { warning "Specifying IMAGE is required." ""; show_usage 1; }
 image="$1"; shift
 
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
@@ -143,7 +145,7 @@ esac
 unset unit sz
 if [ "${realuids-}" = 'n' ]; then
 	unset realuids
-	error "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
+	warning "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
 fi
 
 [ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
