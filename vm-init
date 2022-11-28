@@ -49,7 +49,7 @@ eval "$(grep -Pxo '#  CMD: \K.*' "$SCRIPT")"
 
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
-V mount -t tmpfs tmpfs /tmp
+V mount -t tmpfs tmpfs /tmp -o size='100%'
 if [ -n "${SCRIPT_TEXT-}" ]; then
        echo "$SCRIPT_TEXT" > "$SCRIPT"
        chmod a+x "$SCRIPT"
