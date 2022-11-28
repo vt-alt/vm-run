@@ -4,7 +4,7 @@
 # Inspired by the work of Leonid Krivoshein <klark@altlinux.org> on usermode-fs-tools.
 
 set -efu
-export DEBUGFS_PAGER=cat
+export DEBUGFS_PAGER=__none__
 export LC_ALL=C
 TMP=$(mktemp -d)
 # shellcheck disable=SC2064
@@ -28,6 +28,7 @@ show_usage()
 	echo
 	echo "Informational options:"
 	echo "  --cat=FILE     Cat FILE from IMAGE"
+	echo "  --cp A B       Copy file/dir 'A' from the image into file/dir 'B'"
 	echo "  --ls=DIR       Do not create an image but 'ls -l DIR' in it."
 	echo "  --stat=FILE    Run stat on FILE in IMAGE"
 	exit "$@"
@@ -51,7 +52,7 @@ size=
 image=
 declare -i verbose=0
 fs_type=ext4
-unset ls_path cat_path stat_path qcow2
+unset ls_path cat_path stat_path qcow2 copy_mode
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
@@ -67,6 +68,7 @@ for opt; do
 		--fs=*)         fs_type=$arg ;;
 		--ls=*)         ls_path=$arg ;;
 		--cat=*)        cat_path=$arg ;;
+		--cp)           copy_mode=y ;;
 		--stat=*)       stat_path=$arg ;;
 		--qcow2)        qcow2=y ;;
 		--special)      special=y ;;
@@ -75,25 +77,41 @@ for opt; do
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
-		*) [ -z "$image" ] && image="$opt" || fatal "Unknown argument: $opt" ;;
+		*)              set -- "$@" "$opt" ;;
 	esac
 done
-[ -n "$image" ] || fatal "Specifying IMAGE is required."
+[ -n "${1-}" ] || fatal "Specifying IMAGE is required."
+image="$1"; shift
 
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
 
 if [ -v ls_path ]; then
-	DEBUGFS_PAGER=cat /sbin/debugfs "$image" -R "ls -l $ls_path"
+	/sbin/debugfs "$image" -R "ls -l $ls_path"
 	exit
 elif [ -v cat_path ]; then
 	/sbin/debugfs "$image" -R "cat $cat_path" 2>/dev/null
 	exit
 elif [ -v stat_path ]; then
-	DEBUGFS_PAGER=cat /sbin/debugfs "$image" -R "stat $stat_path"
+	/sbin/debugfs "$image" -R "stat $stat_path"
+	exit
+elif [ -v copy_mode ]; then
+	[ $# -gt 2 ] && fatal "Too much arguments for cp mode"
+	info=$(/sbin/debugfs "$image" -R "stat $1" 2>&1 | head -2)
+	if [[ "$info" =~ File.not.found ]]; then
+		echo "$info" >&2
+		exit 1
+	elif [[ "$info" =~ Type:.directory ]]; then
+		mkdir -p "$2"
+		($SETX; /sbin/debugfs "$image" -R "rdump \"$1\" \"$2\"")
+	else
+		($SETX; /sbin/debugfs "$image" -R "dump \"$1\" \"$2\"")
+	fi
 	exit
 fi
+[ $# -gt 0 ] && fatal "Unknown argument(s): $*"
+
 if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
 	# /tmp is on the same tmpfs so -xdev will not work.
 	exclude=( "/tmp/*" )
