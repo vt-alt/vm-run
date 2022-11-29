@@ -15,13 +15,13 @@ show_usage()
 	echo "Usage: $0 [OPTIONS...] IMAGE"
 	echo "Create ext4 IMAGE from rootfs (or DIR)."
 	echo
-	echo "  --dir=         Dir to copy into image (default: /)"
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
 	echo "  --qcow2        After creation convert IMAGE to qcow2 format"
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
 	echo "                 Default when libfakeroot is loaded (as is under rooter)."
 	echo "  --size=        Size of image (Kb) (default: double of du of DIR)"
+	echo "  --source=      Source directory to copy into image (default: /)"
 	echo "  --special      Copy special files (block, character devices, pipes)"
 	echo "  --volume=      EXT4 volume name (default: basename of IMAGE)"
 	echo "  -v, --verbose  Increase verbosity"
@@ -63,7 +63,7 @@ for opt; do
 	shift
 	arg=${opt##*=}
 	case $opt in
-		--dir=*)        dir=$arg ;;
+		--source=*)     dir=$arg ;;
 		--exclude=*)    exclude+=( "$arg" ) ;;
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
