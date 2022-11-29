@@ -54,7 +54,7 @@ size=
 image=
 declare -i verbose=0
 fs_type=ext4
-unset ls_path cat_path stat_path qcow2 copy_mode
+unset al_all ls_path cat_path stat_path qcow2 copy_mode
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
@@ -69,6 +69,7 @@ for opt; do
 		--size=*)       size=$arg ;;
 		--fs=*)         fs_type=$arg ;;
 		--ls=*)         ls_path=$arg ;;
+		--ls)           ls_all=y ;;
 		--cat=*)        cat_path=$arg ;;
 		--cp)           copy_mode=y ;;
 		--stat=*)       stat_path=$arg ;;
@@ -89,8 +90,38 @@ image="$1"; shift
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
 
+lsdir()
+{
+	set -- "$@"
+	while [ $# -gt 0 ]; do
+		local d=$1
+		shift
+		echo "ls -l \"$d\"" >&3
+		local a dirs=()
+		while IFS= read -r a <&4; do
+			[ -n "$a" ] || break
+			[[ $a =~ ^\ *[0-9]+\ +([0-9]+)\ \([0-9]+\)\ +[0-9]+\ +[0-9]+\ +[0-9]+\ .{17}\ (.*)$ ]] || continue
+			md=${BASH_REMATCH[1]}
+			na=${BASH_REMATCH[2]}
+			a="${a%"$na"}"
+			case "$na" in . | .. | '') continue ;; esac
+			case "$md" in 4????) na+='/'; dirs+=( "$d$na" ) ;; esac
+			printf "%s%s\n" "$a" "$d$na"
+		done
+		set -- "$@" "${dirs[@]}"
+	done
+}
+
 if [ -v ls_path ]; then
 	/sbin/debugfs "$image" -R "ls -l $ls_path"
+	exit
+elif [ -v ls_all ]; then
+	# Avoid wrapping of commands echo by readline
+	export COLUMNS=9999
+	mkfifo "$TMP/in" "$TMP/out"
+	/sbin/debugfs "$image" <"$TMP/in" >"$TMP/out" &
+	exec 3>"$TMP/in" 4<"$TMP/out"
+	lsdir /
 	exit
 elif [ -v cat_path ]; then
 	/sbin/debugfs "$image" -R "cat $cat_path" 2>/dev/null
