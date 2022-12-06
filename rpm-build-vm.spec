@@ -5,7 +5,7 @@
 
 Name: rpm-build-vm
 Version: 1.42
-Release: alt1
+Release: alt2
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -218,8 +218,11 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Tue Dec 06 2022 Vitaly Chikunov <vt@altlinux.org> 1.42-alt2
+- Fix build on gcc-8.
+
 * Tue Nov 29 2022 Vitaly Chikunov <vt@altlinux.org> 1.42-alt1
-- Mount /tmp with size=100%.
+- Mount /tmp with size=100%%.
 - Add --swap option to add SwapFree to the available memory.
 - vm-create-image: List content of the image with --ls, and copy
   files out of image with --cp (to get artifacts).
