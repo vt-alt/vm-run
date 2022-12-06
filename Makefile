@@ -1,5 +1,7 @@
 CC = gcc
-CFLAGS += -Wall -Werror -fanalyzer
+cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null 1>&2 2>/dev/null; then echo $(1); fi)
+CFLAGS += -Wall -Werror \
+	  $(call cc-option,-fanalyzer)
 CFLAGS_STATIC += -static $(CFLAGS)
 LDLIBS += $(shell pkg-config --libs --static blkid)
 
