@@ -19,6 +19,7 @@ show_usage()
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
 	echo "  --qcow2        After creation convert IMAGE to qcow2 format"
+	echo "  --part         Create disk partition (gpt or mbr)."
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
 	echo "                 Default when libfakeroot is loaded (as is under rooter)."
 	echo "  --size=        Size of IMAGE (Kb) (default: double of du of DIR)"
@@ -56,7 +57,7 @@ image=
 declare -i verbose=0
 fs_type=ext4
 create=y
-unset al_all ls_path cat_path stat_path qcow2 copy_mode
+unset al_all ls_path cat_path stat_path qcow2 copy_mode part
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
@@ -80,6 +81,8 @@ for opt; do
 		--realuids)     realuids=y ;;
 		--no-realuids)  unset realuids ;;
 		--append)       unset create ;;
+		--part)         part= ;;
+		--part=*)       part=$arg ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -91,6 +94,7 @@ image="$1"; shift
 
 [ $verbose -gt 0 ] && SETX="set -x" || SETX=:
 [ $verbose -gt 0 ] && VERBOSE=-v || VERBOSE=
+[ $verbose -gt 0 ] && QUIET= || QUIET=-q
 [ $verbose -gt 1 ] && NULL="1" || NULL=/dev/null
 
 lsdir()
@@ -177,7 +181,7 @@ if [ -v create ]; then
 		'')   size=$((total * 3)) ;;
 		*)    size=$((sz * $unit)) ;;
 	esac
-	[ "$size" -lt 10000 ] && size="10M"
+	[ "$size" -lt 10000 ] && size="10000"
 	unset unit sz
 	if [ "${realuids-}" = 'n' ]; then
 		unset realuids
@@ -274,6 +278,26 @@ sort "$TMP/hardlinks" \
 done
 } | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
 ($SETX; /sbin/e2fsck $VERBOSE -p "$image")
+
+if [ -v part ]; then
+	if ! fallocate --insert-range --length 1MiB "$image" 2>/dev/null; then
+		# FALLOC_FL_INSERT_RANGE is not implemented on tmpfs.
+		mv "$image" "$image.part"
+		($SETX; dd if="$image.part" of="$image" conv=sparse obs=1024 seek=1024 >&"$NULL")
+		rm "$image.part"
+	fi
+	if [ "${part,,}" = "gpt" ]; then
+		# Allocate 1MiB space for Secondary GPT.
+		# sfdisk will truncate requested size= to 1MiB unit requiring amount to
+		# be padded, so just make it '+' (maximum) and add 2MiB to the disk image.
+		($SETX; truncate -s +2MiB "$image")
+		# Note: sfdisk will not verify that requested size= will fit into
+		# resulting partition size.
+	fi
+	# "The default start offset for the first partition is 1 MiB."
+	($SETX; echo "size=+, type=L, bootable" | sfdisk --color=never ${part:+-X $part} $QUIET "$image")
+fi
+
 if [ -v qcow2 ]; then
 	mv -f "$image" "$image.raw"
 	($SETX; qemu-img convert "$image.raw" "$image" -O qcow2)

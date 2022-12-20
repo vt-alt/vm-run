@@ -28,6 +28,10 @@ _vm_run()
             COMPREPLY=( $(compgen -W "forbid remap warn" -- "$cur")  )
             return
             ;;
+        --part=)
+            COMPREPLY=( $(compgen -W "gpt mbr" -- "$cur")  )
+            return
+            ;;
         --fat= | --ls= | --create-rootfs=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -d -- "$cur") )
