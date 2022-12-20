@@ -15,6 +15,7 @@ show_usage()
 	echo "Usage: $0 [OPTIONS...] IMAGE"
 	echo "Create ext4 IMAGE from rootfs (or DIR)."
 	echo
+	echo "  --append       Append files to existing raw IMAGE."
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
 	echo "  --qcow2        After creation convert IMAGE to qcow2 format"
@@ -54,6 +55,7 @@ size=
 image=
 declare -i verbose=0
 fs_type=ext4
+create=y
 unset al_all ls_path cat_path stat_path qcow2 copy_mode
 
 # Seems to be true under rooter and scriptlets.
@@ -77,6 +79,7 @@ for opt; do
 		--special)      special=y ;;
 		--realuids)     realuids=y ;;
 		--no-realuids)  unset realuids ;;
+		--append)       unset create ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -149,44 +152,48 @@ if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
 	# /tmp is on the same tmpfs so -xdev will not work.
 	exclude=( "/tmp/*" )
 fi
-# shellcheck disable=SC2068
-total=$(set -f; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
-total=${total%%[[:space:]]*}
-[ $verbose -gt 0 ] && echo >&2 "Source directory='$dir' size=$total kb"
-unit=1024
-shopt -s nocasematch
-case "$size" in
-	*B) unit=1/$unit ;;
-	*K | *[0-9]) unit=1 ;;
-	*M) unit=$((unit*unit)) ;;
-	*G) unit=$((unit*unit*unit)) ;;
-	*T) unit=$((unit*unit*unit*unit)) ;;
-	*[A-Z]) fatal "Unknown unit size: $size" ;;
-esac
-shopt -u nocasematch
-sz=${size%[BKMGTbkmgt]}
-case "$sz" in
-	+*)   size=$((total + ${sz#+} * $unit)) ;;
-	*%)   size=$((total * ${sz%'%'} / 100)) ;;
-	'*'*) size=$((total * ${sz#'*'})) ;;
-	'')   size=$((total * 3)) ;;
-	*)    size=$((sz * $unit)) ;;
-esac
-[ "$size" -lt 10000 ] && size="10M"
-unset unit sz
-if [ "${realuids-}" = 'n' ]; then
-	unset realuids
-	warning "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
-fi
 
-[ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
-	${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
-rm -f "$image"
-[ -v volume ] || volume="$(basename "$image")"
-# mke2fs does not create ext4 by default (even if `-t ext4` is passed),
-# requiring appropriate additional options (like enabling journal, etc),
-# but mkfs.ext4 does the right thing.
-($SETX; /sbin/mkfs.$fs_type ${VERBOSE:--q} -F -L "$volume" -m0 -- "$image" "$size")
+if [ -v create ]; then
+	# shellcheck disable=SC2068
+	total=$(set -f; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
+	total=${total%%[[:space:]]*}
+	[ $verbose -gt 0 ] && echo >&2 "Source directory='$dir' size=$total kb"
+	unit=1024
+	shopt -s nocasematch
+	case "$size" in
+		*B) unit=1/$unit ;;
+		*K | *[0-9]) unit=1 ;;
+		*M) unit=$((unit*unit)) ;;
+		*G) unit=$((unit*unit*unit)) ;;
+		*T) unit=$((unit*unit*unit*unit)) ;;
+		*[A-Z]) fatal "Unknown unit size: $size" ;;
+	esac
+	shopt -u nocasematch
+	sz=${size%[BKMGTbkmgt]}
+	case "$sz" in
+		+*)   size=$((total + ${sz#+} * $unit)) ;;
+		*%)   size=$((total * ${sz%'%'} / 100)) ;;
+		'*'*) size=$((total * ${sz#'*'})) ;;
+		'')   size=$((total * 3)) ;;
+		*)    size=$((sz * $unit)) ;;
+	esac
+	[ "$size" -lt 10000 ] && size="10M"
+	unset unit sz
+	if [ "${realuids-}" = 'n' ]; then
+		unset realuids
+		warning "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
+	fi
+
+	[ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
+		${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
+	rm -f "$image"
+	[ -v volume ] || volume="$(basename "$image")"
+	# mke2fs does not create ext4 by default (even if `-t ext4` is passed),
+	# requiring appropriate additional options (like enabling journal, etc),
+	# but mkfs.ext4 does the right thing.
+	($SETX; /sbin/mkfs.$fs_type ${VERBOSE:--q} -F -L "$volume" -m0 -- "$image" "$size")
+fi
+[ -f "$image" ] || fatal "Raw image '$image' not found."
 
 set_metadata()
 {
