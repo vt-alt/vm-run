@@ -17,7 +17,7 @@ _vm_run()
             return
             ;;
         --bios=)
-            COMPREPLY=( $(compgen -W "secureboot microvm uefi" -- "$cur")  )
+            COMPREPLY=( $(compgen -W "secureboot microvm u-boot uefi" -- "$cur")  )
             return
             ;;
         --fs=)

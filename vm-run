@@ -319,6 +319,16 @@ elif [ "$BIOS" = "secureboot" ]; then
 	fi
 elif [ "$BIOS" = "microvm" ]; then
 	OPTS+=" -bios bios-microvm.bin"
+elif [ "$BIOS" = "u-boot" ]; then
+	set +f
+	u_boot=( /usr/share/u-boot/qemu*/u-boot.bin )
+	set -f
+	if [ ! -e "$u_boot" ]; then
+		echo "Error: Das U-Boot is not available for this system (install u-boot-qemu)." >&2
+		exit 1
+	fi
+	OPTS+=" -bios $u_boot"
+	unset u_boot
 elif [ -f "/usr/share/qemu/$BIOS" ]; then
 	OPTS+=" -bios $BIOS"
 elif [ -n "$BIOS" ]; then
