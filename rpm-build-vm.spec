@@ -23,7 +23,11 @@ BuildRequires: libblkid-devel-static
 # This should run even if check is disabled.
 BuildRequires: /dev/kvm
 # shellchek is used in %%build as pre-install syntax check.
+%ifarch %ix86 x86_64
+# There is no shellcheck on other arches in p9. 'make shellcheck' below can
+# handle absence of shellcheck binary using only 'bash -n'.
 BuildRequires: shellcheck
+%endif
 
 # Try to load un-def kernel this way to avoid "forbidden dependencies"
 # from sisyphus_check.
@@ -123,7 +127,7 @@ CFLAGS="%optflags" make
 
 # This is pre-install syntax check for bash scripts. This does not
 # run any functional tests.
-make check
+make shellcheck
 %else
 # Still useful to verify stub script even in absence of shellcheck.
 bash -n vm-run

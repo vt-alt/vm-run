@@ -5,6 +5,8 @@ CFLAGS += -Wall -Werror \
 CFLAGS_STATIC += -static $(CFLAGS)
 LDLIBS += $(shell pkg-config --libs --static blkid)
 
+SHELLCHECK_OPTS := $(shell shellcheck --help)
+
 scripts = \
 	vm-run \
 	vm-run-stub \
@@ -24,8 +26,11 @@ fakesudo: fakesudo.c
 clean:
 	-rm -f initrd-init fakesudo *.o
 
-check: $(scripts)
+check: shellcheck
+shellcheck: $(scripts)
 	$(foreach f,$^,bash -n $(f);)
+ifneq ($(findstring --severity=,$(SHELLCHECK_OPTS)),)
 	shellcheck --severity=error $^
+endif
 
-.PHONY: clean check
+.PHONY: clean check shellcheck
