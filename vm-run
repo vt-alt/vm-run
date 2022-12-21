@@ -465,6 +465,15 @@ if [ -n "$ROOTFS" ]; then
 		echo "Error: Image '$ROOTFSFILE' in unsupported format '$FORMAT'."
 		exit 1
 	fi
+	if [ -n "${PTTYPE-}" ]; then
+		# Disk partition detected.
+		tmpfile=$(mktemp)
+		# 'qemu-img dd's skip= applies to the value of count= (or after count= is started)
+		# in contrast to dd(1) where it applies before count= begins.
+		qemu-img dd if="$ROOTFSFILE" of="$tmpfile" count=2052 skip=2048
+		eval "$(/sbin/blkid -o export -- "$tmpfile")"
+		rm $tmpfile
+	fi
 	if [[ ! "${TYPE-}" =~ ^ext[234]$ ]]; then
 		echo "Error: ext4 filesystem not found in '$ROOTFSFILE'." >&2
 		exit 1
