@@ -4,8 +4,8 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.42
-Release: alt2
+Version: 1.43
+Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -222,6 +222,10 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Wed Dec 21 2022 Vitaly Chikunov <vt@altlinux.org> 1.43-alt1
+- More image creation options.
+- Fix build with old shellcheck (for p9).
+
 * Tue Dec 06 2022 Vitaly Chikunov <vt@altlinux.org> 1.42-alt2
 - Fix build on gcc-8.
 
