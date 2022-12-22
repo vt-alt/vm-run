@@ -21,6 +21,10 @@ else
 fi
 
 SCRIPT=${cmdline#* SCRIPT=}
+if [ "$SCRIPT" = "$cmdline" ]; then
+	echo "vm-init: SCRIPT= is not set."
+	SCRIPT=
+fi
 SCRIPT=${SCRIPT%% *}
 
 V mount -t sysfs -o nosuid,noexec,nodev sys /sys
@@ -32,11 +36,11 @@ if ! grep -sq '^\S\+ / 9p ' /proc/mounts; then
 		mkdir -p /mnt/9p
 		V mount -t 9p -o "9p2000.L,trans=virtio,access=any,msize=262144" "$mount_tag" /mnt/9p
 		unset mount_tag mount_tag_f
-		SCRIPT="/mnt/9p$SCRIPT"
+		[ -n "$SCRIPT" ] && SCRIPT="/mnt/9p/$SCRIPT"
 	fi
 fi
 
-eval "$(grep -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
+eval "$(grep -s -o '  MODPROBE_OPTIONS=.*' "$SCRIPT")"
 # Last MODPROBE_OPTIONS will win.
 export MODPROBE_OPTIONS
 
@@ -45,7 +49,7 @@ if ! modprobe -q ext4 >/dev/null 2>&1; then
 fi
 
 # Additional early commands like 'mount --bind'.
-eval "$(grep -Pxo '#  CMD: \K.*' "$SCRIPT")"
+eval "$(grep -s -Pxo '#  CMD: \K.*' "$SCRIPT")"
 
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
@@ -219,7 +223,7 @@ RET=$?
 
 [ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
 case "$SCRIPT" in /tmp/*) umount $V -n --lazy /tmp;; esac
-echo $RET 2>/dev/null > $SCRIPT.ret ||
+echo $RET 2>/dev/null > "$SCRIPT.ret" ||
 	echo Exit code $RET is lost
 
 # Disable `reboot: Power down' message
