@@ -220,8 +220,8 @@ int main(int argc, char **argv)
 	get_cmdline();
 	char *root = get_option("root");
 	if (root) {
-		char *rootfstype = get_option("rootfstype");
-		char *rootflags  = get_option("rootflags");
+		const char *rootfstype = get_option("rootfstype");
+		const char *rootflags  = get_option("rootflags");
 		mount_devtmpfs();
 		if (strncmp(root, "/dev/", 5)) {
 			mount_sys();
@@ -235,8 +235,17 @@ int main(int argc, char **argv)
 			} else
 				root = dev;
 		}
+		if (!rootfstype) {
+			blkid_probe pr = blkid_new_probe_from_filename(root);
+			if (pr && !blkid_do_fullprobe(pr)) {
+				const char *type;
+				if (!blkid_probe_lookup_value(pr, "TYPE", &type, NULL))
+					rootfstype = type;
+			}
+		}
 		if (mount(root, newroot, rootfstype, 0, rootflags))
-			xerrno(errno, "mount root=%s", root);
+			xerrno(errno, "mount root=%s (type=%s flags=%s)", root,
+			       rootfstype, rootflags);
 	} else {
 		char *mount_tag = find_mount_tag();
 		if (mount_tag) {
