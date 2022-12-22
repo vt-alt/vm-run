@@ -511,6 +511,7 @@ if [ -n "$ROOTFS" ]; then
 	fi
 	OPTS+="$ROOTFSOPTS"
 	[ "$FORMAT" = "raw" ] && OPTS+=",format=raw"
+	[[ "$ROOTFSOPTS" =~ ,if= ]] || \
 	case "$DRIVE_IF" in
 		virtio)
 			OPTS+=",if=virtio"
