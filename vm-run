@@ -525,7 +525,7 @@ if [ -n "$ROOTFS" ]; then
 			[ "$HOSTTYPE" = powerpc64le ] && MODULES+=" ibmvscsi"
 			;;
 	esac
-	APPEND+=" root=UUID=$UUID rootfstype=$TYPE"
+	APPEND+=" root=UUID=$UUID"
 	[ -n "$NOBIND" ] || printf '#  CMD: V mount --bind /mnt/9p/usr/src /usr/src\n' >> $SCRIPT
 	unset FORMAT ROOTFSFILE
 fi
