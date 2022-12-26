@@ -119,10 +119,19 @@ lsdir()
 	done
 }
 
+is_filesystem() {
+	local TYPE=
+	local $(/sbin/blkid -o export -- "$image")
+	if [[ ! "$TYPE" =~ ^ext[234]$ ]]; then
+		fatal "'$image' is not raw ext4 filesystem image."
+	fi
+}
 if [ -v ls_path ]; then
+	is_filesystem
 	/sbin/debugfs "$image" -R "ls -l $ls_path"
 	exit
 elif [ -v ls_all ]; then
+	is_filesystem
 	# Avoid wrapping of commands echo by readline
 	export COLUMNS=9999
 	mkfifo "$TMP/in" "$TMP/out"
@@ -131,12 +140,15 @@ elif [ -v ls_all ]; then
 	lsdir /
 	exit
 elif [ -v cat_path ]; then
+	is_filesystem
 	/sbin/debugfs "$image" -R "cat $cat_path" 2>/dev/null
 	exit
 elif [ -v stat_path ]; then
+	is_filesystem
 	/sbin/debugfs "$image" -R "stat $stat_path"
 	exit
 elif [ -v copy_mode ]; then
+	is_filesystem
 	[ $# -gt 2 ] && fatal "Too much arguments for cp mode"
 	info=$(/sbin/debugfs "$image" -R "stat $1" 2>&1 | head -2)
 	if [[ "$info" =~ File.not.found ]]; then
