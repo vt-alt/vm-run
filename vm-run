@@ -60,8 +60,8 @@ usage() {
 	echo "    --overlay=FS[,SIZE=][:PATH]"
        	echo "                     Auto create overlay FS over PATH"
 	echo "    --qemu='...'     Pass additional options to qemu. There are also other, more"
-	echo "                     specific shortcuts: --device=, --blockdev=, --object=,"
-	echo "                     --machine=, --global=, --netdev=, and --chardev="
+	echo "                     specific shortcuts: -device, -blockdev, -object,"
+	echo "                     -machine, -global, -netdev, and -chardev"
 	echo "    --rootfs=IMAGE   Use existing ext4 IMAGE for rootfs instead of 9p"
 	echo "                     To generate new image each time use --create-rootfs=IMAGE"
 	echo "                     or vm-create-image tool."
@@ -91,8 +91,8 @@ usage() {
 	exit 1
 }
 
-for opt do
-	shift
+while [ $# -gt 0 ]; do # opt
+	opt=$1
 	case "$opt" in
 		-h|--help)   usage ;;
 		-s|--silent) NOCMD=y TIME= ;;
@@ -111,15 +111,12 @@ for opt do
 		--tcg)	     KVM= ;;
 		--kvm=*)     KVM="${opt#*=}" ;;
 		--microvm)   VIRTIOBUS=device OPTS+=" -M microvm" BIOS=microvm ;;
-		--machine=*) OPTS+=" -machine ${opt#*=}" ;;
-		--global=*)  OPTS+=" -global ${opt#*=}" ;;
-		--object=*)  OPTS+=" -object ${opt#*=}" ;;
-		--device=*)  OPTS+=" -device ${opt#*=}" ;;
-		--drive=*)   OPTS+=" -drive ${opt#*=}" ;;
-		--blockdev=*)OPTS+=" -blockdev ${opt#*=}" ;;
-		--netdev=*)  OPTS+=" -netdev ${opt#*=}" ;;
-		--chardev=*) OPTS+=" -chardev ${opt#*=}" ;;
-		--snapshot)  OPTS+=" -snapshot" ;;
+		-accel | -acpitable | -action | -bios | -blockdev | -boot | -cdrom | -chardev | -compat | \
+		-cpu | -debugcon | -detved | -device | -drive | -dtb | -fda | -fsdev | -fw_cfg | -gdb | \
+		-global | -hda | -hdb | -hdc | -hdd | -icount | -m | -M | -machine | -mon | -msg | -mtdblock | \
+		-nic | -numa | -object | -overcommit | -pflash | -plugin | -qmp | -qmp-pretty | -readconfig | \
+		-rtc | -sd | -serial | -smbios | -smp | -tpmdev | -trace | -virtfs \
+			) shift; OPTS+=" $opt ${1:?"$opt requires argument"}" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
 		--cpu=*)     NRCPU="${opt#*=}" ;;
@@ -141,10 +138,11 @@ for opt do
 		--hvc)       HVC=y ;;
 		--rsync=*)   RSYNC="${opt#*=}" ;;
 		--swap)      SWAP=y ;;
-		--) break ;;
-		-*) echo "Unknown option $opt $*" >&2; usage ;;
-		*)  set -- "$opt" "$@"; break ;;
+		--) shift; break ;;
+		-*) echo "Unknown option $opt" >&2; usage ;;
+		*)  break ;;
 	esac
+	shift
 done
 
 # If no command run shell
