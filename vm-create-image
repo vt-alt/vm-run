@@ -57,7 +57,7 @@ image=
 declare -i verbose=0
 fs_type=ext4
 create=y
-unset al_all ls_path cat_path stat_path qcow2 copy_mode part
+unset al_all ls_path cat_path stat_path qcow2 copy_mode part extract
 
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
@@ -83,6 +83,7 @@ for opt; do
 		--append)       unset create ;;
 		--part)         part= ;;
 		--part=*)       part=$arg ;;
+		--extract)      extract=y ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -122,8 +123,18 @@ lsdir()
 is_filesystem() {
 	local TYPE=
 	local $(/sbin/blkid -o export -- "$image")
-	if [[ ! "$TYPE" =~ ^ext[234]$ ]]; then
-		fatal "'$image' is not raw ext4 filesystem image."
+	if [ -v extract ]; then
+		[ -n "${PTTYPE-}" ] || fatal "'$image' does not have PTTYPE."
+		local newimage=$image.extract
+		trap "rm $VERBOSE -- ${newimage@Q}" 0
+		($SETX; dd if="$image" of="$newimage" conv=sparse skip=2048)
+		# `qemu-img dd` does not support conv=sparse.
+		image=$newimage
+		local $(/sbin/blkid -o export -- "$image")
+		[[ "$TYPE" =~ ^ext[234]$ ]] || fatal "Extracted image from '$image' does not have ext4."
+	elif [[ ! "$TYPE" =~ ^ext[234]$ ]]; then
+		fatal "'$image' is not raw ext4 filesystem image." \
+			"Use --extract for low speed fs extraction."
 	fi
 }
 if [ -v ls_path ]; then
