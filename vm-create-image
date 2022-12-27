@@ -244,62 +244,67 @@ set_metadata()
 	[ "$ty" = "010" ] || printf 'sif "%s" mode %03o%04o\n' "$f" "$ty" "0$md"
 }
 
->"$TMP/hardlinks"
-declare -i hl
-( set -f
-  $SETX
-  # shellcheck disable=SC2068
-  find "$dir" -xdev \
-	 ${exclude[@]/#/-not -path } \
-	 -not -samefile "$image" \
-	 -not -samefile "$dir" \
-	 -printf '%D:%i %n %y %m %U %G %T@ %P\n'
-) | {
-printf 'lcd "%s"\n' "$dir"
-while read -r di hl t md us gr ts f; do
-	f="${f//[[:cntrl:]]/?}"
-	case "$t" in
-	   f)	if [ "$hl" -gt 1 ]; then
-			echo "$di $hl $t $md $us $gr $ts $f" >>"$TMP/hardlinks"
-			continue
-		fi
-		printf 'write "%s" "%s"\n' "$f" "$f"
-		;;
-	   d)	printf 'mkdir "%s"\n' "$f"
-		;;
-	   l)	printf 'symlink "%s" "%s"\n' "$f" "$(readlink -n -- "$dir/$f")"
-		;;
-	   *)	if [ -v special ]; then
-			case "$t" in
-				c | b) minmaj="$(stat -c '%Hr %Lr' -- "$dir/$f")" ;;
-				s) continue ;; # No support in debugfs(8).
-				*) continue ;;
-			esac
-			printf 'cd "%s"\nmknod "%s" %s %s\ncd /\n' \
-				"$(dirname "$f")" \
-				"$(basename "$f")" \
-				"$t" \
-				"$minmaj"
-		else
-			continue
-		fi
-		;;
-	esac
-	set_metadata "$t" "$md" "$us" "$gr" "$ts" "$f"
-done
-sort "$TMP/hardlinks" \
-| while read -r di hl t md us gr ts f; do
-	if [ "$di" != "${pdi-}" ]; then
-		printf 'write "%s" "%s"\n' "$f" "$f"
+generate_debugfs_commands() {
+	local dir=$1
+
+	>"$TMP/hardlinks"
+	declare -i hl
+	( set -f
+	  $SETX
+	  # shellcheck disable=SC2068
+	  find "$dir" -xdev \
+		 ${exclude[@]/#/-not -path } \
+		 -not -samefile "$image" \
+		 -not -samefile "$dir" \
+		 -printf '%D:%i %n %y %m %U %G %T@ %P\n'
+	) | {
+	printf 'lcd "%s"\n' "$dir"
+	while read -r di hl t md us gr ts f; do
+		f="${f//[[:cntrl:]]/?}"
+		case "$t" in
+		   f)	if [ "$hl" -gt 1 ]; then
+				echo "$di $hl $t $md $us $gr $ts $f" >>"$TMP/hardlinks"
+				continue
+			fi
+			printf 'write "%s" "%s"\n' "$f" "$f"
+			;;
+		   d)	printf 'mkdir "%s"\n' "$f"
+			;;
+		   l)	printf 'symlink "%s" "%s"\n' "$f" "$(readlink -n -- "$dir/$f")"
+			;;
+		   *)	if [ -v special ]; then
+				case "$t" in
+					c | b) minmaj="$(stat -c '%Hr %Lr' -- "$dir/$f")" ;;
+					s) continue ;; # No support in debugfs(8).
+					*) continue ;;
+				esac
+				printf 'cd "%s"\nmknod "%s" %s %s\ncd /\n' \
+					"$(dirname "$f")" \
+					"$(basename "$f")" \
+					"$t" \
+					"$minmaj"
+			else
+				continue
+			fi
+			;;
+		esac
 		set_metadata "$t" "$md" "$us" "$gr" "$ts" "$f"
-		printf 'sif "%s" links_count %d\n' "$f" "$hl"
-		pdi="$di"
-		pf="$f"
-	else
-		printf 'ln "%s" "%s"\n' "$pf" "$f"
-	fi
-done
-} | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
+	done
+	sort "$TMP/hardlinks" \
+	| while read -r di hl t md us gr ts f; do
+		if [ "$di" != "${pdi-}" ]; then
+			printf 'write "%s" "%s"\n' "$f" "$f"
+			set_metadata "$t" "$md" "$us" "$gr" "$ts" "$f"
+			printf 'sif "%s" links_count %d\n' "$f" "$hl"
+			pdi="$di"
+			pf="$f"
+		else
+			printf 'ln "%s" "%s"\n' "$pf" "$f"
+		fi
+	done
+	}
+}
+generate_debugfs_commands "$dir" | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
 ($SETX; /sbin/e2fsck $VERBOSE -p "$image")
 
 if [ -v part ]; then
