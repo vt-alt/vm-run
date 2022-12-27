@@ -51,7 +51,7 @@ _vm_run()
     if [[ $cur == -* ]]; then
         local script=$(type -p "$cmd")
         [ -n "$script" ] || return
-        local opts=$(awk '/^while .*; do # opt/' RS= ORS='\n\n' "$script" | grep -Eo '.+[\)]' | grep -Po -e '-[^^)*| ]+')
+        local opts=$(awk '/^(for|while) .*; do # opt/' RS= ORS='\n\n' "$script" | grep -Eo '.+[\)]' | grep -Po -e '-[^^)*| ]+')
         COMPREPLY=( $(compgen -W "\$opts" -- "$cur") )
         [[ ${COMPREPLY-} == *= ]] && compopt -o nospace
     elif [ "$cmd" = "vm-run" ]; then

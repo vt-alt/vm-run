@@ -62,7 +62,7 @@ unset al_all ls_path cat_path stat_path qcow2 copy_mode part extract
 # Seems to be true under rooter and scriptlets.
 [[ "${LD_PRELOAD-}" =~ libfakeroot.so ]] && realuids=y || realuids=n
 
-for opt; do
+for opt; do # opt
 	shift
 	arg=${opt##*=}
 	case $opt in
@@ -90,6 +90,7 @@ for opt; do
 		*)              set -- "$@" "$opt" ;;
 	esac
 done
+
 [ -n "${1-}" ] || { warning "Specifying IMAGE is required." ""; show_usage 1; }
 image="$1"; shift
 
