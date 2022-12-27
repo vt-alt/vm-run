@@ -51,7 +51,7 @@ fatal()
 }
 
 unset exclude
-dir="/"
+unset src
 size=
 image=
 declare -i verbose=0
@@ -66,7 +66,7 @@ for opt; do
 	shift
 	arg=${opt##*=}
 	case $opt in
-		--source=*)     dir=$arg ;;
+		--source=*)     src+=( $arg ) ;;
 		--exclude=*)    exclude+=( "$arg" ) ;;
 		--volume=*)     volume=$arg ;;
 		--size=*)       size=$arg ;;
@@ -175,6 +175,9 @@ elif [ -v copy_mode ]; then
 fi
 [ $# -gt 0 ] && fatal "Unknown argument(s): $*"
 
+if [ ! -v src ]; then
+	src=( "/" )
+fi
 if [ ! -v exclude ]; then
 	# /tmp is on the same tmpfs so -xdev will not work.
 	exclude=( "/tmp/*" )
@@ -182,9 +185,9 @@ fi
 
 if [ -v create ]; then
 	# shellcheck disable=SC2068
-	total=$(set -f; du -scx ${exclude[@]/#/--exclude } "$dir" 2>/dev/null | tail -1)
+	total=$(set -f; du -scx ${exclude[@]/#/--exclude } "${src[@]}" 2>/dev/null | tail -1)
 	total=${total%%[[:space:]]*}
-	[ $verbose -gt 0 ] && echo >&2 "Source directory='$dir' size=$total kb"
+	[ $verbose -gt 0 ] && echo >&2 "Source directory='${src[*]}' size=$total kb"
 	unit=1024
 	shopt -s nocasematch
 	case "$size" in
@@ -304,7 +307,11 @@ generate_debugfs_commands() {
 	done
 	}
 }
-generate_debugfs_commands "$dir" | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
+
+for dir in "${src[@]}"; do
+	generate_debugfs_commands "$dir" | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
+done
+
 ($SETX; /sbin/e2fsck $VERBOSE -p "$image")
 
 if [ -v part ]; then
