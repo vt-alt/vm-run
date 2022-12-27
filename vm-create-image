@@ -50,7 +50,7 @@ fatal()
 	exit 1
 }
 
-exclude=()
+unset exclude
 dir="/"
 size=
 image=
@@ -175,7 +175,7 @@ elif [ -v copy_mode ]; then
 fi
 [ $# -gt 0 ] && fatal "Unknown argument(s): $*"
 
-if [ "$dir" = '/' ] && [ -z "${exclude-}" ]; then
+if [ ! -v exclude ]; then
 	# /tmp is on the same tmpfs so -xdev will not work.
 	exclude=( "/tmp/*" )
 fi
