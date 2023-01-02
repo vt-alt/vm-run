@@ -15,7 +15,8 @@ scripts = \
 	vm-resize \
 	filetrigger \
 	createimage \
-	bash_completion
+	bash_completion \
+	kvm-ok
 
 all: initrd-init fakesudo
 initrd-init: initrd-init.c

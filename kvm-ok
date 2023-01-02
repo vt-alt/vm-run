@@ -1,0 +1,72 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Test availability of KVM for vm-run
+#
+# Copyright (C) 2022 Vitaly Chikunov <vt@altlinux.org>
+
+# ERROR: ld.so: object 'libfakeroot.so' from LD_PRELOAD cannot be preloaded (cannot open shared object file): ignored.
+unset LD_PRELOAD
+
+OPTS=''
+TMOUT=1
+TMOUT_EXIT=2
+unset EXPECT
+if [ "$HOSTTYPE" = "armh" ]; then
+	# Special case for aarch64 host running in aarch32 personality.
+	type -p qemu-system-aarch64-bundle >/dev/null && HOSTTYPE=aarch32
+fi
+case "$HOSTTYPE" in
+	aarch32)
+		QEMU=qemu-system-aarch64-bundle
+		OPTS=" -M virt,highmem=off -cpu host,aarch64=off"
+		# aarch32 will not output anything, so if it reaches timeout we assume QEMU is functional.
+		TMOUT_EXIT=0
+		TMOUT=.1
+		;;
+	aarch64)
+		QEMU=qemu-system-aarch64
+		OPTS=" -M virt,gic-version=host -cpu host"
+		# We can add '-bios /usr/share/AAVMF/AAVMF_CODE.fd' and expect for 'UEFI firmware'
+		# string, but it's slower.
+		TMOUT_EXIT=0
+		TMOUT=.1
+		;;
+	armh)   QEMU=qemu-system-arm
+		OPTS=" -M virt"
+		# There is no KVM on armh so it shall always fail.
+		;;
+	i586)   QEMU=qemu-system-i386
+		EXPECT="SeaBIOS"
+		;;
+	powerpc64le)
+		QEMU=qemu-system-ppc64
+		OPTS=" -M kvm-type="
+		# There is still unavoidable warning: 'KVM: Failed to create TCE64 table for liobn 0x80000000'
+		# -cpu host is not required (only option for HV, but PR allows other cpu types).
+		grep -q -P '^processor\s+:\s[1234567]$' /proc/cpuinfo \
+			&& OPTS+="PR,cap-fwnmi=off" || OPTS+="HV"
+		OPTS+=",cap-ccf-assist=off"
+		EXPECT="QEMU Starting"
+		;;
+	x86_64) QEMU=qemu-system-x86_64
+		EXPECT="SeaBIOS"
+		;;
+	*)
+		# This is not a problem, it just means there is not KVM.
+		echo "Error: architecture $HOSTTYPE is unknown." >&2
+		exit 1
+esac
+RET=1
+atexit() {
+	kill -9 $QEMU_PID >/dev/null 2>&1
+	[ $1 -eq 0 ] && echo "KVM is available." || echo "KVM is not available."
+}
+coproc $QEMU -nodefaults -nographic -serial stdio -accel kvm $OPTS "$@"
+# COPROC_PID will be unset asynchronously.
+QEMU_PID=$COPROC_PID
+trap 'atexit $?' EXIT
+while read -r a || { [ $? -gt 128 ] && exit $TMOUT_EXIT; }; do
+	[ -v EXPECT ] && [[ "$a" =~ $EXPECT ]] && exit 0
+done <&$COPROC
+wait $QEMU_PID

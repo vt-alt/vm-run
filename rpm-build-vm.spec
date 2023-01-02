@@ -147,6 +147,7 @@ install -D -p -m 0755 createimage %buildroot%_rpmlibdir/z-vm-createimage.filetri
 install -Dp bash_completion %buildroot%_sysconfdir/bashrc.d/vm_completion.sh
 install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 %endif
+install -D -p -m 0755 kvm-ok      %buildroot%_bindir/kvm-ok
 
 %pre run
 # Only allow to install inside of hasher.
@@ -166,6 +167,7 @@ install -D -p -m 0755 vm-resize   %buildroot%_bindir/vm-resize
 
 %files run
 %_bindir/vm-run
+%_bindir/kvm-ok
 
 %ifarch %supported_arches
 %_bindir/vm-resize
@@ -209,6 +211,7 @@ set | grep ^LD_
 find /boot > /tmp/filelist
 %_rpmlibdir/posttrans-filetriggers /tmp/filelist
 
+kvm-ok || :
 timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 ! timeout --preserve-status 300 vm-run --verbose exit 1
