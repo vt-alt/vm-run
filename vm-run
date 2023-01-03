@@ -211,7 +211,7 @@ ppc_opts() {
 		# online cores 1-7, (while cores 0,8,.. is not SMT cores.)
 		if grep -q -P '^processor\s+:\s[1234567]$' /proc/cpuinfo; then
 			# If SMT enabled use slower PR (problem state) KVM.
-			echo " -M kvm-type=PR"
+			echo " -M kvm-type=PR,cap-ccf-assist=off,cap-fwnmi=off"
 		else
 			# KVM HV is faster, but incompatible with SMT.
 			echo " -M kvm-type=HV,cap-ccf-assist=off"
