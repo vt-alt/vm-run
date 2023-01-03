@@ -310,7 +310,7 @@ elif [ "$BIOS" = "secureboot" ]; then
 		OPTS+=" -global ICH9-LPC.disable_s3=1 -M q35,smm=on"
 		OPTS+=" -global driver=cfi.pflash01,property=secure,value=on"
 		for f in ${SB_PFLASH-}; do
-			OPTS+=" -drive file=$EDK2/$f,if=pflash,format=raw,readonly"
+			OPTS+=" -drive file=$EDK2/$f,if=pflash,format=raw,readonly=on"
 		done
 	else
 		echo "Error: Secure Boot is not available for this platform." >&2
