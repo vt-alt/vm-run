@@ -251,7 +251,7 @@ case "$HOSTTYPE" in
 		MAXMEM=4096
 		MAXCPU=8
 		EDK2=/usr/share/AAVMF
-		EFI_CODE=QEMU_EFI.fd
+		EFI_CODE=( QEMU_EFI.fd AAVMF_CODE.fd )
 		;;
 	aarch32)
 		PACKAGE=qemu-system-aarch64-bundle-core
@@ -298,6 +298,7 @@ esac
 
 # Set up BIOS.
 if [ "$BIOS" = "uefi" ]; then
+	for EFI_CODE in "${EFI_CODE[@]}"; do [ -e $EDK2/$EFI_CODE ] && break || unset EFI_CODE; done
 	if [ -n "${EFI_CODE-}" ]; then
 		OPTS+=" -bios $EDK2/$EFI_CODE"
 	else
