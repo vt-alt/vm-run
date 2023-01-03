@@ -53,10 +53,30 @@ case "$HOSTTYPE" in
 		EXPECT="SeaBIOS"
 		;;
 	*)
-		# This is not a problem, it just means there is not KVM.
-		echo "Error: architecture $HOSTTYPE is unknown." >&2
-		exit 1
+		# This is not a problem, it just means there is no KVM.
+		echo "KVM is not available (Unknown architecture $HOSTTYPE)." >&2
+		exit 3
 esac
+
+if [ ! -c /dev/kvm ]; then
+	echo >&2 "KVM is not available (No /dev/kvm device)."
+	exit 4
+elif [ ! -w /dev/kvm ]; then
+	echo >&2 "KVM is not available (/dev/kvm is not writable)."
+	exit 4
+elif [ "$HOSTTYPE" = "armh" ] && \
+	[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ] && \
+	! /usr/bin/qemu-system-aarch64-bundle-kvm-ok; then
+	echo >&2 "KVM is not available (No KVM kernel driver on aarch64 host)."
+	exit 5
+elif ! { true < /dev/kvm; } 2>/dev/null; then
+	echo >&2 "KVM is not available (No KVM kernel driver)."
+	exit 5
+elif ! type -p $QEMU >/dev/null; then
+	echo >&2 "KVM is not available (No $QEMU binary in PATH)."
+	exit 6
+fi
+
 RET=1
 atexit() {
 	kill -9 $QEMU_PID >/dev/null 2>&1
