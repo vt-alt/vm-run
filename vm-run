@@ -298,6 +298,7 @@ esac
 
 # Set up BIOS.
 if [ "$BIOS" = "uefi" ]; then
+	[ "$HOSTTYPE" = x86_64 ] && OPTS+="-M q35"
 	for EFI_CODE in "${EFI_CODE[@]}"; do [ -e $EDK2/$EFI_CODE ] && break || unset EFI_CODE; done
 	if [ -n "${EFI_CODE-}" ]; then
 		OPTS+=" -bios $EDK2/$EFI_CODE"
