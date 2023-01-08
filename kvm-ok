@@ -15,6 +15,7 @@ unset EXPECT
 if [ "$HOSTTYPE" = "armh" ]; then
 	# Special case for aarch64 host running in aarch32 personality.
 	type -p qemu-system-aarch64-bundle >/dev/null && HOSTTYPE=aarch32
+	ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
 fi
 case "$HOSTTYPE" in
 	aarch32)
@@ -65,8 +66,8 @@ elif [ ! -w /dev/kvm ]; then
 	echo >&2 "KVM is not available (/dev/kvm is not writable)."
 	exit 4
 elif [ "$HOSTTYPE" = "armh" ] && \
-	[ -x /usr/bin/qemu-system-aarch64-bundle-kvm-ok ] && \
-	! /usr/bin/qemu-system-aarch64-bundle-kvm-ok; then
+	[ -x $ARMH_KVM_OK ] && \
+	! $ARMH_KVM_OK; then
 	echo >&2 "KVM is not available (No KVM kernel driver on aarch64 host)."
 	exit 5
 elif ! { true < /dev/kvm; } 2>/dev/null; then
