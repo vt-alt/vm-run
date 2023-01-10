@@ -218,7 +218,7 @@ ppc_opts() {
 		fi
 	else
 		# KVM doesn't support this.
-		echo -n ",compat=power7"
+		echo -n " -M max-cpu-compat=power7"
 	fi
 }
 
