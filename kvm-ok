@@ -65,15 +65,16 @@ if [ ! -c /dev/kvm ]; then
 elif [ ! -w /dev/kvm ]; then
 	echo >&2 "KVM is not available (/dev/kvm is not writable)."
 	exit 4
-elif [ "$HOSTTYPE" = "armh" ] && \
-	[ -x $ARMH_KVM_OK ] && \
-	! $ARMH_KVM_OK; then
-	echo >&2 "KVM is not available (No KVM kernel driver on aarch64 host)."
-	exit 5
+elif [ "$HOSTTYPE" = "aarch32" ] && [ -x $ARMH_KVM_OK ]; then
+	if ! $ARMH_KVM_OK; then
+		echo >&2 "KVM is not available (No KVM kernel driver on aarch64 host)."
+		exit 5
+	fi
 elif ! { true < /dev/kvm; } 2>/dev/null; then
 	echo >&2 "KVM is not available (No KVM kernel driver)."
 	exit 5
-elif ! type -p $QEMU >/dev/null; then
+fi
+if ! type -p $QEMU >/dev/null; then
 	echo >&2 "KVM is not available (No $QEMU binary in PATH)."
 	exit 6
 fi
