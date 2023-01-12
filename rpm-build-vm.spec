@@ -177,14 +177,6 @@ install -D -p -m 0755 kvm-ok      %buildroot%_bindir/kvm-ok
 %_sysconfdir/bashrc.d/vm*.sh
 
 %post run
-# Required in case of --udevd option to vm-run
-mkdir -p /run/udev
-chmod a+twx /run/udev
-
-# Just in case
-mkdir -p /run/dbus
-chmod a+twx /run/dbus
-
 # u&mount should to be readable to use inside vm
 control mount unprivileged
 
