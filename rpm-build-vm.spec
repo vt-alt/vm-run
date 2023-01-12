@@ -188,30 +188,36 @@ chmod a+twx /mnt
 
 # Allow user creation (for openssh)
 chmod a+r /etc/login.defs
-%endif
 
 %pre checkinstall
 set -ex
 # qemu in tcg mode can hang un-def-5.10 kernel on ppc64 if smp>1 on "smp:
 # Bringing up secondary CPUs" message.
-%ifarch %supported_arches
 ls -l /dev/kvm
 set | grep ^LD_
-%endif
 
-# Simualte filetrigger run
+# Simulate filetrigger run
 find /boot > /tmp/filelist
 %_rpmlibdir/posttrans-filetriggers /tmp/filelist
+rm /tmp/filelist
+# Remove trigger so it does not re-create '/tmp/vm-ext4.img'.
+> %_rpmlibdir/z-vm-createimage.filetrigger
 
-kvm-ok || :
+kvm-ok
 timeout 300 vm-run --verbose uname -a
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
+rmdir /mnt/0
+rm /usr/src/ext4.0.img
 ! timeout --preserve-status 300 vm-run --verbose exit 1
 timeout 300 vm-run --rootfs --verbose df
 timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep Unknown'
 timeout 300 vm-run --tcg --cpu=1 cat /proc/cpuinfo
+# Clean up without '-f' ensures these files existed.
+rm /tmp/initramfs-*un-def-alt*.img
+# SCRIPT and exit code files form each vm-run invocation. Each SCRIPT file
+# should correspond to '.ret' file.
+find /tmp/vm.?????????? -maxdepth 0 | xargs -t -i -n1 rm {} {}.ret
 
-%ifarch %supported_arches
 %check
 # Verify availability of KVM in girar & beehiver.
 ls -l /dev/kvm && test -w /dev/kvm
