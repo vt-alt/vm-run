@@ -9,7 +9,7 @@
 set -efu
 
 # Save original env first
-SCRIPT=$(mktemp)
+SCRIPT=$(mktemp "${TMPDIR:-/tmp}/vm.XXXXXXXXXX")
 ( LOGNAME=root
   USER=root
   declare -fx
@@ -458,6 +458,12 @@ if [ -n "${IMPLYROOTFS-}" ] && [ -z "$ROOTFS" ]; then
 	ROOTFSCREATE=auto
 fi
 
+blkid() {
+	local tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/blkid.XXXXXXXXXX")
+	BLKID_FILE="$tmpdir" /sbin/blkid "$@"
+	rm -rf "$tmpdir"
+}
+
 if [ -n "$ROOTFS" ]; then
 	ROOTFSFILE=${ROOTFS%%,*}
 	ROOTFSOPTS=${ROOTFS#"$ROOTFSFILE"}
@@ -467,10 +473,10 @@ if [ -n "$ROOTFS" ]; then
 	if [ "$FORMAT" = "qcow2" ]; then
 		tmpfile=$(mktemp)
 		qemu-img dd if="$ROOTFSFILE" of="$tmpfile" count=4
-		eval "$(/sbin/blkid -o export -- "$tmpfile")"
+		eval "$(blkid -o export -- "$tmpfile")"
 		rm $tmpfile
 	elif [ "$FORMAT" = "raw" ]; then
-		eval "$(/sbin/blkid -o export -- "$ROOTFSFILE")"
+		eval "$(blkid -o export -- "$ROOTFSFILE")"
 	else
 		echo "Error: Image '$ROOTFSFILE' in unsupported format '$FORMAT'."
 		exit 1
@@ -481,7 +487,7 @@ if [ -n "$ROOTFS" ]; then
 		# 'qemu-img dd's skip= applies to the value of count= (or after count= is started)
 		# in contrast to dd(1) where it applies before count= begins.
 		qemu-img dd if="$ROOTFSFILE" of="$tmpfile" count=2052 skip=2048
-		eval "$(/sbin/blkid -o export -- "$tmpfile")"
+		eval "$(blkid -o export -- "$tmpfile")"
 		rm $tmpfile
 	fi
 	if [[ ! "${TYPE-}" =~ ^ext[234]$ ]]; then
