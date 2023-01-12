@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.46
+Version: 1.47
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -224,6 +224,10 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Fri Jan 13 2023 Vitaly Chikunov <vt@altlinux.org> 1.47-alt1
+- kvm-ok: Fix KVM detection for aarch32.
+- Remove some temporary noise files.
+
 * Tue Jan 10 2023 Vitaly Chikunov <vt@altlinux.org> 1.46-alt1
 - ppc: Fix TCG run on qemu since 6.0.
 - Add TCG mode test in checkinstall.
