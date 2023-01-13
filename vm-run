@@ -333,7 +333,7 @@ elif [ -f "/usr/share/qemu/$BIOS" ]; then
 	OPTS+=" -bios $BIOS"
 elif [ -n "$BIOS" ]; then
 	OPTS+=" -bios $BIOS"
-elif [ -e /usr/share/qemu/bios.bin ]; then
+elif [ -e /usr/share/qemu/bios.bin ] && [[ "$HOSTTYPE" =~ [356x]86 ]]; then
 	# x86 BIOS that doesn't clear screen unlike default bios-256k.bin
 	OPTS+=" -bios bios.bin"
 fi
