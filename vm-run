@@ -24,7 +24,6 @@ SBIN=
 VERBOSE=
 QUIET=quiet	# no boot messages
 DEF=
-MAXMEM=
 MAXCPU=
 DEPMOD=
 BIOS=
@@ -41,7 +40,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU RSYNC SWAP
+unset NRCPU RSYNC SWAP MEM MAXMEM SOFTMEM
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -55,6 +54,7 @@ usage() {
 	echo "    --hvc            Enable high speed serial virtconsole"
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
 	echo "    --mem=           Pass '-m ...' to qemu (memory size)"
+	echo "                     Set to 'max' to exceed default soft limit."
 	echo "    --microvm        Use microvm machine type"
 	echo "    --multidevs=     9p multidevs mode (remap, forbid, warn)"
 	echo "    --overlay=FS[,SIZE=][:PATH]"
@@ -118,7 +118,7 @@ while [ $# -gt 0 ]; do # opt
 		-rtc | -sd | -serial | -smbios | -smp | -tpmdev | -trace | -virtfs \
 			) shift; OPTS+=" $opt ${1:?"$opt requires argument"}" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
-		--mem=*)     OPTS+=" -m ${opt#*=}" ;;
+		--mem=*)     MEM="${opt#*=}" ;;
 		--cpu=*)     NRCPU="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
@@ -237,7 +237,7 @@ case "$HOSTTYPE" in
 		QEMU=qemu-system-ppc64
 		OPTS+=$(ppc_opts)
 		# Avoid `CPU time limit exceeded'
-		MAXMEM=32768
+		SOFTMEM=32768
 		MAXCPU=8
 		;;
 	aarch64)
@@ -248,7 +248,7 @@ case "$HOSTTYPE" in
 		OPTS+=" -M virt,gic-version=3 -cpu max"
 		# More cpu and memory is slower launch, so limit them
 		# to sane big values
-		MAXMEM=4096
+		SOFTMEM=4096
 		MAXCPU=8
 		EDK2=/usr/share/AAVMF
 		EFI_CODE=( QEMU_EFI.fd AAVMF_CODE.fd )
@@ -259,6 +259,7 @@ case "$HOSTTYPE" in
 		QEMU=qemu-system-aarch64-bundle
 		OPTS+=" -M virt,highmem=off -cpu host,aarch64=off"
 		APPEND+=" watchdog_thresh=60"
+		# qemu-system-aarch64: Addressing limited to 32 bits, but memory exceeds it by 1073741824 bytes
 		MAXMEM=3072
 		MAXCPU=6
 		;;
@@ -275,7 +276,9 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-i386
-		MAXMEM=1536
+		# qemu-system-i386: at most 2047 MB RAM can be simulated
+		# qemu-system-i386: ram size too large
+		MAXMEM=2047
 		;;
 	x86_64)
 		PACKAGE=qemu-system-x86-core
@@ -380,21 +383,24 @@ if ! mountpoint -q /proc; then
 	echo >&2 "  Try to enter hasher with: hsh-shell --mountpoints=/proc,/dev/kvm"
 fi
 
-if [ -e /proc/meminfo ]; then
+[ "${MEM-}" = max ] && unset MEM SOFTMEM
+if [ -v MEM ]; then
+	M=$MEM
+elif [ -e /proc/meminfo ]; then
 	M=$(awk '$1 == "MemAvailable:" {print int($2 / 1024)}' /proc/meminfo)
 	[ -v SWAP ] && M=$((M + $(awk '$1 == "SwapFree:" {print int($2 / 1024)}' /proc/meminfo)))
-	if [ "$MAXMEM" ] && [ "$M" -gt "$MAXMEM" ]; then
-		M=$MAXMEM
-	fi
+	# SOFTMEM is just to speed up boot times.
+	[ -v SOFTMEM ] && [ "$M" -gt "$SOFTMEM" ] && M=$SOFTMEM
+	# MAXMEM is hard QEMU limit (on 32-bit arches).
+	[ -v MAXMEM ] && [ "$M" -gt "$MAXMEM" ] && M=$MAXMEM
+	# Round to 256M for ppc
+	[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
+	[ $M -le 256 ] && unset M
 else
-        M=256
-
+        unset M
 fi
-# Round to 256M for ppc
-[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
-if [ $M -ge 256 ]; then
-        DEF+=" -m ${M}M"
-fi
+[ -n "${M:-}" ] && DEF+=" -m $M"
+unset M
 
 if [ -v NRCPU ]; then
 	# What user requested explicitly.
