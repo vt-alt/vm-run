@@ -24,7 +24,6 @@ SBIN=
 VERBOSE=
 QUIET=quiet	# no boot messages
 DEF=
-MAXCPU=
 DEPMOD=
 BIOS=
 KVM=try		# try to use kvm by default
@@ -40,7 +39,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU RSYNC SWAP MEM MAXMEM SOFTMEM
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -238,7 +237,9 @@ case "$HOSTTYPE" in
 		OPTS+=$(ppc_opts)
 		# Avoid `CPU time limit exceeded'
 		SOFTMEM=32768
-		MAXCPU=8
+		SOFTCPU=8
+		# qemu-system-ppc64: kvm_init_vcpu: kvm_get_vcpu failed (1014): Too many open files
+		MAXCPU=1014
 		;;
 	aarch64)
 		PACKAGE=qemu-system-aarch64-core
@@ -249,7 +250,10 @@ case "$HOSTTYPE" in
 		# More cpu and memory is slower launch, so limit them
 		# to sane big values
 		SOFTMEM=4096
-		MAXCPU=8
+		# Maximum available CPU count is 128.
+		SOFTCPU=8
+		# qemu-system-aarch64: Invalid SMP CPUs 1234. The max CPUs supported by machine 'virt-7.2' is 512
+		MAXCPU=512
 		EDK2=/usr/share/AAVMF
 		EFI_CODE=( QEMU_EFI.fd AAVMF_CODE.fd )
 		;;
@@ -261,7 +265,11 @@ case "$HOSTTYPE" in
 		APPEND+=" watchdog_thresh=60"
 		# qemu-system-aarch64: Addressing limited to 32 bits, but memory exceeds it by 1073741824 bytes
 		MAXMEM=3072
-		MAXCPU=6
+		# Maximum available CPU count is 16.
+		# CPUs are booted sequentially so higher number slower boot.
+		SOFTCPU=6
+		# qemu-system-aarch64: Capacity of the redist regions(123) does not match the number of vcpus(512)
+		MAXCPU=123
 		;;
 	armh)
 		PACKAGE=qemu-system-arm-core
@@ -270,7 +278,10 @@ case "$HOSTTYPE" in
 		OPTS+=" -M virt,highmem=off -cpu max"
 		APPEND+=" watchdog_thresh=60"
 		MAXMEM=2047
-		MAXCPU=4
+		# Maximum available CPU count is 8.
+		SOFTCPU=2
+		# qemu-system-arm: Number of SMP CPUs requested (512) exceeds max CPUs supported by machine 'mach-virt' (8)
+		MAXCPU=8
 		;;
 	i586)
 		PACKAGE=qemu-system-x86-core
@@ -279,11 +290,18 @@ case "$HOSTTYPE" in
 		# qemu-system-i386: at most 2047 MB RAM can be simulated
 		# qemu-system-i386: ram size too large
 		MAXMEM=2047
+		# Maximum available CPU count is 8.
+		SOFTCPU=8
+		# Boot error if above 225: qemu: qemu_thread_create: Resource temporarily unavailable
+		MAXCPU=225
 		;;
 	x86_64)
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-x86_64
+		# qemu-system-x86_64: Invalid SMP CPUs 1234. The max CPUs supported by machine 'pc-i440fx-7.2' is 255
+		# qemu-system-x86_64: Invalid SMP CPUs 2553. The max CPUs supported by machine 'pc-q35-7.2' is 288
+		# But even for q35: smpboot: native_cpu_up: bad cpu 256
 		MAXCPU=255
 		EDK2=/usr/share/OVMF
 		EFI_CODE=OVMF_CODE.fd
@@ -402,6 +420,7 @@ fi
 [ -n "${M:-}" ] && DEF+=" -m $M"
 unset M
 
+[ "${NRCPU-}" = max ] && unset NRCPU SOFTCPU
 if [ -v NRCPU ]; then
 	# What user requested explicitly.
 	DEF+=" -smp cores=$NRCPU"
@@ -414,7 +433,10 @@ else
 	if [ "$NPROCS" -gt 1 ]; then
 		declare -i nprocs_macro=$(rpm --eval '%__nprocs')
 		[ -n "$nprocs_macro" ] && [ "$NPROCS" -gt "$nprocs_macro" ] && NPROCS=$nprocs_macro
-		[ -n "$MAXCPU" ] && [ "$NPROCS" -gt "$MAXCPU" ] && NPROCS=$MAXCPU
+		# SOFTCPU is high enough for boot times around 1 second.
+		[ -v SOFTCPU ] && [ "$NPROCS" -gt "$SOFTCPU" ] && NPROCS=$SOFTCPU
+		# Exceeding MAXCPU will produce QEMU error.
+		[ -v MAXCPU ] && [ "$NPROCS" -gt "$MAXCPU" ] && NPROCS=$MAXCPU
 		DEF+=" -smp cores=$NPROCS"
 		unset nprocs_macro
 	fi
