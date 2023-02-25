@@ -60,12 +60,14 @@ static void xerrno(int err, const char *fmt, ...)
 	exit(1);
 }
 
-static void modprobe(void)
+static int _modprobe(void)
 {
+	int loaded = 0, failed = 0;
+
 	FILE *fd = fopen(modules, "r");
 	if (!fd) {
 		printf("open '%s': %s", modules, strerror(errno));
-		return;
+		return 0;
 	}
 	char buf[256];
 	while (fgets(buf, sizeof(buf), fd) && buf[0]) {
@@ -85,11 +87,22 @@ static void modprobe(void)
 			xerrno(errno, "read %ld bytes from '%s'", st.st_size, buf);
 		close(f);
 		int r = init_module(image, st.st_size, "");
-		if (r)
-			printf("init_module '%s' error %d\n", buf, r);
+		if (!r) {
+			loaded++;
+		} else if (errno != EEXIST && !(failed && errno == ENOENT)) {
+			printf("init_module '%s' %s\n", buf, strerror(errno));
+			failed++;
+		}
 		free(image);
 	}
 	fclose(fd);
+	return failed ? loaded : 0;
+}
+static void modprobe(void)
+{
+	/* Load while it loads, to workaround intermittent load ordering failures. */
+	while (_modprobe())
+		printf("Retry modules loading.\n");
 }
 
 #define COMMAND_LINE_SIZE 2048
