@@ -54,7 +54,8 @@ eval "$(grep -s -Pxo '#  CMD: \K.*' "$SCRIPT")"
 
 # Save script if it's on /tmp before mounting tmpfs over it.
 case "$SCRIPT" in /tmp/*) SCRIPT_TEXT=$(cat $SCRIPT);; esac
-V mount -t tmpfs tmpfs /tmp -o size='100%'
+
+V mount -t tmpfs -o size='100%' tmpfs /tmp
 if [ -n "${SCRIPT_TEXT-}" ]; then
        echo "$SCRIPT_TEXT" > "$SCRIPT"
        chmod a+x "$SCRIPT"
@@ -105,6 +106,13 @@ else
 		ata_generic sd_mod virtio_net
 fi
 V modprobe virtio-rng
+
+if SWAPDEV=$(blkid -L tmpfs); then
+	V /sbin/swapon -L tmpfs
+	SWAPSIZE=$(awk '$1 == "SwapTotal:" {print $2}' /proc/meminfo)
+	V mount -t tmpfs -o remount,size="$SWAPSIZE"K /tmp
+fi
+unset SWAPSIZE SWAPDEV
 
 # test writability
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then

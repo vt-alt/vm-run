@@ -39,7 +39,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -137,6 +137,7 @@ while [ $# -gt 0 ]; do # opt
 		--hvc)       HVC=y ;;
 		--rsync=*)   RSYNC="${opt#*=}" ;;
 		--swap)      SWAP=y ;;
+		--tmp=*)     TMPFS="${opt#*=}" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
 		*)  break ;;
@@ -570,6 +571,24 @@ fi
 # which could be (and will be) under /usr/src, but we bind mount it
 # from 9p:/, thus 9p modules should be already loaded.
 MODULES+=" 9p 9pnet_virtio"
+
+# Prepare swap device for tmpfs in guest.
+if [ -v TMPFS ]; then
+	SWAPIMG=/tmp/vm-tmpfs.qcow2
+	SWAPSZ=${TMPFS%%,*}
+	SWAPOPT=${TMPFS#"$SWAPSZ"}
+	# Clean up used space from previous run.
+	rm -f -- "$SWAPIMG"
+	[ "$SWAPSZ" = max ] && SWAPSZ=$(df /tmp --output=avail -BM 2>/dev/null | tail -n+2)
+	[ "${SWAPSZ%[BKMGTbkmgt]}" = "$SWAPSZ" ] && SWAPSZ+='M'
+	# mkswap wants secure permissions.
+	(umask 077; truncate -s "$SWAPSZ" "$SWAPIMG"~)
+	/sbin/mkswap -q -L tmpfs "$SWAPIMG"~
+	qemu-img convert "$SWAPIMG"~ "$SWAPIMG" -O qcow2
+	rm -- "$SWAPIMG"~
+	OPTS+=" -drive file=$SWAPIMG$SWAPOPT"
+	unset SWAPSZ SWAPIMG SWAPOPT TMPFS
+fi
 
 if [ -n "${HVC-}" ]; then
 	CONSOLE=hvc0
