@@ -107,8 +107,8 @@ else
 fi
 V modprobe virtio-rng
 
-if SWAPDEV=$(blkid -L tmpfs); then
-	V /sbin/swapon -L tmpfs
+if SWAPDEV=$(blkid -t TYPE=swap -o device); then
+	V /sbin/swapon $SWAPDEV
 	SWAPSIZE=$(awk '$1 == "SwapTotal:" {print $2}' /proc/meminfo)
 	V mount -t tmpfs -o remount,size="$SWAPSIZE"K /tmp
 fi
