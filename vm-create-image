@@ -18,6 +18,7 @@ show_usage()
 	echo "  --append       Append files to existing raw IMAGE."
 	echo "  --exclude=     Mask to exclude from dir (default: /tmp/*)"
 	echo "  --fs=          Specify fs type: ext4 (default), ext3, ext2."
+	echo "  --mkfs=        Specify additional augments for mkfs."
 	echo "  --qcow2        After creation convert IMAGE to qcow2 format"
 	echo "  --part         Create disk partition (gpt or mbr)."
 	echo "  --realuids     Set UID/GID to real values instead of root:root."
@@ -57,6 +58,7 @@ image=
 declare -i verbose=0
 fs_type=ext4
 create=y
+mkfs=
 unset al_all ls_path cat_path stat_path qcow2 copy_mode part extract
 
 # Seems to be true under rooter and scriptlets.
@@ -84,6 +86,7 @@ for opt; do # opt
 		--part)         part= ;;
 		--part=*)       part=$arg ;;
 		--extract)      extract=y ;;
+		--mkfs=*)       mkfs+=" $arg" ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
 		-*)             fatal "Unknown option $opt" ;;
@@ -222,7 +225,7 @@ if [ -v create ]; then
 	# mke2fs does not create ext4 by default (even if `-t ext4` is passed),
 	# requiring appropriate additional options (like enabling journal, etc),
 	# but mkfs.ext4 does the right thing.
-	($SETX; /sbin/mkfs.$fs_type ${VERBOSE:--q} -F -L "$volume" -m0 -- "$image" "$size")
+	($SETX; /sbin/mkfs.$fs_type ${VERBOSE:--q} -F -L "$volume" -m0 $mkfs -- "$image" "$size")
 fi
 [ -f "$image" ] || fatal "Raw image '$image' not found."
 
