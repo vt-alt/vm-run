@@ -39,7 +39,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -49,6 +49,7 @@ usage() {
 	echo "    --bios=          Use particular firmware (ex. uefi)"
 	echo "    --cpu=           Pass '-smp ...' to qemu (cpus)"
 	echo "    --drive=         Shortcut to pass '-drive file=' to qemu"
+	echo "    --ext4[=feat]    Implies automatic --rootfs with fs feature enabled."
 	echo "    --fat=DIR        Shortcut to pass DIR as rw FAT partition"
 	echo "    --hvc            Enable high speed serial virtconsole"
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
@@ -126,8 +127,10 @@ while [ $# -gt 0 ]; do # opt
 		--multidevs=*) MULTIDEVS="${opt#*=}" ;;
 		--modules=*) MODULES+=" ${opt#*=}" ;;
 		--create-rootfs=*) ROOTFS="${opt#*=}"; ROOTFSCREATE=y ;;
-		--rootfs=*)        ROOTFS="${opt#*=}" ;;
-		--rootfs)          ROOTFS=$ROOTFS_DEF_IMAGE ;;
+		--rootfs=*)  ROOTFS="${opt#*=}" ;;
+		--rootfs)    ROOTFS=$ROOTFS_DEF_IMAGE ;;
+		--ext4)      NOBIND=y; IMPLYROOTFS=y; ;;
+		--ext4=*)    NOBIND=y; IMPLYROOTFS=y; FSFEAT="${opt#*=}" ;;
 		--no-bind)   NOBIND=y ;;
 		--no-virtio) DRIVE_IF= ;;
 		--scsi)      DRIVE_IF=scsi ;;
@@ -497,7 +500,7 @@ if [ -n "$ROOTFS" ]; then
 	ROOTFSFILE=${ROOTFS%%,*}
 	ROOTFSOPTS=${ROOTFS#"$ROOTFSFILE"}
 	[ "$ROOTFSCREATE" = "auto" ] && [ -e "$ROOTFS" ] && ROOTFSCREATE=
-	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2)
+	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2) ${FSFEAT:+--mkfs="-O$FSFEAT"}
 	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po '^file format: \K.*')
 	if [ "$FORMAT" = "qcow2" ]; then
 		tmpfile=$(mktemp)
@@ -563,7 +566,7 @@ if [ -n "$ROOTFS" ]; then
 	esac
 	APPEND+=" root=UUID=$UUID"
 	[ -n "$NOBIND" ] || printf '#  CMD: V mount --bind /mnt/9p/usr/src /usr/src\n' >> $SCRIPT
-	unset FORMAT ROOTFSFILE
+	unset FORMAT ROOTFSFILE FSFEAT
 fi
 # We shall load these modules even though we're using ext4 for rootfe
 # (but supposedly we can mount 9p later and modprobe before that).
