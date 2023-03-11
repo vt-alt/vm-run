@@ -222,6 +222,15 @@ if [ -v create ]; then
 		${realuids+(realuids)} ${special+(special)} ${volume+volume=$volume}
 	rm -f "$image"
 	[ -v volume ] || volume="$(basename "$image")"
+	# When verity enabled on ppc64 block size shall be equal to page size (which is 64K there).
+	if [[ "$mkfs" =~ verity ]]; then
+		bs=$(getconf PAGE_SIZE)
+		if [ "$bs" != 4096 ]; then
+		       # Last option takes precedence, thus prepend our blocksize setting so user can override it.
+		       mkfs="-b $bs $mkfs"
+		fi
+		unset bs
+	fi
 	# mke2fs does not create ext4 by default (even if `-t ext4` is passed),
 	# requiring appropriate additional options (like enabling journal, etc),
 	# but mkfs.ext4 does the right thing.
