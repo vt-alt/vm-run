@@ -190,6 +190,9 @@ chmod a+twx /mnt
 # Allow user creation (for openssh)
 chmod a+r /etc/login.defs
 
+# Call filetrigger for the past kernels.
+find /boot | %_rpmlibdir/vm-run.filetrigger
+
 %pre checkinstall
 PS4=$'\n+ '
 set -ex
