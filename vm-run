@@ -111,7 +111,7 @@ while [ $# -gt 0 ]; do # opt
 		--tcg)	     KVM= ;;
 		--kvm=*)     KVM="${opt#*=}" ;;
 		--microvm)   VIRTIOBUS=device OPTS+=" -M microvm" BIOS=microvm ;;
-		-accel | -acpitable | -action | -bios | -blockdev | -boot | -cdrom | -chardev | -compat | \
+		-add-fd | -accel | -acpitable | -action | -bios | -blockdev | -boot | -cdrom | -chardev | -compat | \
 		-cpu | -debugcon | -detved | -device | -drive | -dtb | -fda | -fsdev | -fw_cfg | -gdb | \
 		-global | -hda | -hdb | -hdc | -hdd | -icount | -m | -M | -machine | -mon | -msg | -mtdblock | \
 		-nic | -numa | -object | -overcommit | -pflash | -plugin | -qmp | -qmp-pretty | -readconfig | \
