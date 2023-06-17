@@ -39,7 +39,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
-unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -84,6 +84,7 @@ usage() {
 	echo "    --user           Run under user instead of root (implies --sudo)"
 	echo "    --udevd          Start udevd"
 	echo # Other options
+	echo "    --stdout         Output everything to stderr except command's stdout"
 	echo "    -h, --help       This help"
 	echo "    --verbose        Show vm actions verbosely"
 	echo "    --               No options after this marker"
@@ -141,6 +142,7 @@ while [ $# -gt 0 ]; do # opt
 		--rsync=*)   RSYNC="${opt#*=}" ;;
 		--swap)      SWAP=y ;;
 		--tmp=*)     TMPFS="${opt#*=}" ;;
+		--stdout)    STDOUT=y ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
 		*)  break ;;
@@ -598,15 +600,30 @@ if [ -v TMPFS ]; then
 	unset SWAPSZ SWAPIMG SWAPOPT TMPFS
 fi
 
-if [ -n "${HVC-}" ]; then
+# Setup output devices.
+unset ODEV
+if [ -v HVC ]; then
 	CONSOLE=hvc0
-	MODULES+=" virtio_console"
 	# It seems 'signal=off' handles ^C differently than '-serial mon:stdio'.
 	# For example, "vm-run --hvc cat /dev/zero | pv >/dev/null" is not stoppable
 	# with ^C when 'signal=off' (you still can stop it with ^A x).
-	DEF+=" -device virtio-serial-$VIRTIOBUS -device virtconsole,chardev=con -chardev stdio,mux=on,signal=off,id=con -mon chardev=con"
+	ODEV=" -device virtconsole,chardev=con -chardev stdio,mux=on,signal=off,id=con -mon chardev=con"
+	unset HVC
 else
 	DEF+=" -serial mon:stdio"
+fi
+
+if [ -v STDOUT ]; then
+	printf "#  CMD: STDOUT=y\n" >> $SCRIPT
+	exec 3>&1 1>&2
+	ODEV=" -add-fd fd=3,set=2 -chardev pipe,path=/dev/fdset/2,id=c1 -device virtserialport,chardev=c1,name=stdout"
+	unset STDOUT
+fi
+
+if [ -v ODEV ]; then
+	MODULES+=" virtio_console"
+	DEF+=" -device virtio-serial-$VIRTIOBUS $ODEV"
+	unset ODEV
 fi
 
 # Sorted by preference (%buildroot first) and mtime (newer first)
@@ -776,8 +793,8 @@ if [ -v LOGLEVEL ]; then
 	else
 		APPEND+=" earlyprintk=serial ignore_loglevel"
 	fi
-
 fi
+
 # QEMU Monitor is available (through character backend multiplexer), keys:
 #   C-a h    print this help
 #   C-a x    exit emulator

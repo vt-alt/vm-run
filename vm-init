@@ -76,6 +76,17 @@ else
 	echo "vm-init: console=$CONSOLE is not accessible."
 fi
 
+if [ -n "$STDOUT" ]; then
+	for vport in /sys/class/virtio-ports/*; do
+		read name < "$vport/name"
+		if [ "$name" = stdout ]; then
+			name=$(basename "$vport")
+			exec 1>/dev/"$name"
+		fi
+	done
+	unset STDOUT vport name
+fi
+
 install -g utmp -m660 /dev/null /var/log/btmp
 install -g utmp -m664 /dev/null /var/log/wtmp
 
@@ -118,8 +129,8 @@ unset SWAPSIZE SWAPDEV
 if tmp=$(mktemp -p /usr/src 2>/dev/null); then
 	rm $tmp
 else
-	echo "  Error: Impossible to create files in /usr/src"
-	echo "         Exit code from the command will be lost!"
+	echo >&2 "  Error: Impossible to create files in /usr/src"
+	echo >&2 "         Exit code from the command will be lost!"
 fi
 
 # Prepare network
@@ -193,7 +204,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 		V mount $V -t ext4 -o loop $img $mnt
 		img_count=$((img_count+1))
 	else
-		echo "Unknown how to overlay $OVERLAY"
+		echo >&2 "Unknown how to overlay $OVERLAY"
 		unset mnt
 	fi
 	if [ "$mnt" ]; then
@@ -214,17 +225,17 @@ if [ -n "$RUNUSER" ]; then
 	RUNUSER="/usr/lib/vm-run/vm-fakesudo -u $RUNUSER -i exec"
 fi
 
-[ -z "$NOTTY" ] && V vm-resize ${V:--q}
+[ -z "$NOTTY" ] && [ -t 1 ] && V vm-resize ${V:--q}
 
 if [ -f "$SCRIPT" ]; then
 	set -- $SCRIPT
 else
-	echo "vm-init: SCRIPT=$SCRIPT not found, running rescue shell."
+	echo >&2 "vm-init: SCRIPT=$SCRIPT not found, running rescue shell."
 	unset RUNUSER
 	export PS1='(rescue)# '
 	set -- /bin/bash
 fi
-$RUNUSER setsid --ctty --wait "$@"
+$RUNUSER setsid $(test -t 1 && echo --ctty) --wait "$@"
 RET=$?
 # TODO: We can miss some stderr output here, for example script is not
 # executable due to incorrect TMPDIR.
@@ -232,7 +243,7 @@ RET=$?
 [ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
 case "$SCRIPT" in /tmp/*) umount $V -n --lazy /tmp;; esac
 echo $RET 2>/dev/null > "$SCRIPT.ret" ||
-	echo Exit code $RET is lost
+	echo >&2 "Exit code $RET is lost"
 
 # Disable `reboot: Power down' message
 [ -z "${cmdline/* quiet *}" ] && echo 0 > /proc/sys/kernel/printk
