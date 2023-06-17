@@ -14,10 +14,12 @@ Collection of links to similar tools & scripts:
 * https://github.com/amluto/virtme 2014-2021
 * https://github.com/vincentbernat/eudyptula-boot 2014-2022
 * https://github.com/legionus/vm 2015-2020
-* https://github.com/osandov/osandov-linux 2015-2022
+* https://github.com/osandov/osandov-linux 2015-2023
 * https://github.com/cirosantilli/runlinux.git 2015-2017
 * https://github.com/systemd/mkosi 2016-
 * https://github.com/rapido-linux/rapido 2016-
-* https://github.com/jollheef/out-of-tree 2018-2022
+* https://github.com/jollheef/out-of-tree 2018-
 * https://github.com/YADRO-KNS/ktest 2018-2020
 * https://gitlab.com/cip-project/cip-core/isar-cip-core/blob/master/start-qemu.sh 2019-
+* https://github.com/obirvalger/vml 2021-
+* https://github.com/klark973/vm 2023-
