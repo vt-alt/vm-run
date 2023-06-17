@@ -10,6 +10,8 @@ Release: alt1
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
 Group: Development/Other
+Url: https://www.altlinux.org/Hasher/vm-run
+Vcs: https://github.com/vt-alt/vm-run
 
 Source: %name-%version.tar
 
