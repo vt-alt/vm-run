@@ -215,7 +215,7 @@ if [ -v create ]; then
 	unset unit sz
 	if [ "${realuids-}" = 'n' ]; then
 		unset realuids
-		warning "libfakeroot is not detected so realuids mode if off, use --realuids to enable."
+		warning "libfakeroot is not detected so realuids mode is off, use --realuids to enable."
 	fi
 
 	[ $verbose -gt 0 ] && echo >&2 "Creating ${fs_type:-ext4} image '$image' size=$size" \
