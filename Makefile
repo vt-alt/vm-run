@@ -10,6 +10,7 @@ SHELLCHECK_OPTS := $(shell shellcheck --help)
 scripts = \
 	vm-run \
 	vm-run-stub \
+	vm-initrd \
 	vm-init \
 	vm-create-image \
 	vm-resize \

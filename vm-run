@@ -754,34 +754,8 @@ if [ ! -f "${INITRD-}" ]; then
 		fi
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
-	CPIO=$(mktemp -d)
 	[ "$VIRTIOBUS" = "pci" ] && MODULES+=" virtio_pci" || MODULES+=" virtio_mmio"
-	if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
-		echo "Error: modprobe failure." >&2
-		if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
-			[ -w "$ROOT/lib/modules/$KVER/" ] && HELP= \
-				|| HELP=" under rooter"
-			echo "  Run 'depmod${ROOT:+ -b $ROOT} $KVER'$HELP." >&2
-		fi
-		exit 1
-	fi
-	while read skip f; do
-		bn=${f##*/}
-		un=${bn%.?z}
-		[ -e "$CPIO/$un" ] && continue
-		[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
-		cp -au "$f" "$CPIO/" 2>/dev/null || continue
-		case "$bn" in
-			*.gz) gzip -qd "$CPIO/$bn" ;;
-			*.xz) xz   -qd "$CPIO/$bn" ;;
-		esac
-		printf '%s\n' "$un" >&3
-	done < "$CPIO/modprobe.txt" \
-		3> "$CPIO/modules.conf"
-	cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
-	rm "$CPIO/modprobe.txt"
-	(cd "$CPIO"; find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
-	rm -rf "$CPIO"
+	vm-initrd --modules="$MODULES" --basedir="$ROOT" ${VERBOSE:+-v} "$INITRD" "$KVER"
 	unset CPIO MODULES KVER skip f bn un
 fi
 unset ROOT

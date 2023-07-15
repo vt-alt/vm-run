@@ -1,0 +1,98 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# vm-initrd: Create initramfs that just modprobe and switch to rootfs
+#
+# Copyright (C) 2023 Vitaly Chikunov <vt@altlinux.org>
+#
+# shellcheck disable=SC2155,SC2207,SC2128
+
+show_usage()
+{
+	echo "Usage: $0 [OPTIONS...] IMAGE [KERNEL_VERSION]"
+	echo "Create minimalistic initramfs image"
+	echo
+	echo "  -b, --basedir=     Modules basedir (where /lib/modules located)."
+	echo "  --modules=         Add modules into IMAGE."
+	echo "  -v, --verbose      Increase verbosity level."
+	echo "  -h, --help         This help."
+	exit "$@"
+}
+
+warning() {
+	local w prefix="$(basename "$0"): "
+	for w do
+		echo >&2 "$prefix$w"
+		prefix=
+	done
+}
+
+fatal() {
+	warning "$@"
+	exit 1
+}
+
+ROOT=
+MODULES=
+VERBOSE=
+
+args=()
+while [ $# -gt 0 ]; do # opt
+	opt=$1
+	arg=${opt##*=}
+	case $opt in
+		--basedir=*)	ROOT=$arg ;;
+		-b)		shift; ROOT="${1?"$opt requires argument"}" ;;
+		--modules=*)	MODULES+=" $arg" ;;
+		-v | --verbose)	VERBOSE=1 ;;
+		-h | --help)	show_usage ;;
+		--)		shift; break ;;
+		-*)		fatal "Unknown option $opt" ;;
+		*)		args+=( "$opt" ) ;;
+	esac
+	shift
+done
+set -- "${args[@]}" "$@"
+
+[ -n "${1-}" ] || { warning "Specifying IMAGE is required." ""; show_usage 1; }
+INITRD="$1"; shift
+if [ -n "${1-}" ]; then
+	KVER="$1"; shift
+else
+	KVER=( $(cd  "$ROOT/lib/modules" && ls) )
+	[ ${#KVER[@]} -gt 1 ] && fatal "Too many kernels found (${#KVER[@]}), specify one."
+	[ ${#KVER[@]} -eq 0 ] && fatal "No kernels found, install one or adjust --basedir="
+fi
+[ -d "$ROOT/lib/modules/$KVER" ] || fatal "Requested kernel missing $ROOT/lib/modules dir."
+
+[ $# -eq 0 ] || fatal "Exceeding options: $*"
+
+CPIO=$(mktemp -d)
+# shellcheck disable=SC2086
+if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
+	echo "Error: modprobe failure." >&2
+	if [ ! -s "$ROOT/lib/modules/$KVER/modules.dep.bin" ]; then
+		[ -w "$ROOT/lib/modules/$KVER/" ] && HELP= \
+			|| HELP=" under rooter"
+		echo "  Run 'depmod${ROOT:+ -b $ROOT} $KVER'$HELP." >&2
+	fi
+	exit 1
+fi
+while read -r _ f; do
+	bn=${f##*/}
+	un=${bn%.?z}
+	[ -e "$CPIO/$un" ] && continue
+	[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
+	cp -au "$f" "$CPIO/" 2>/dev/null || continue
+	case "$bn" in
+		*.gz)  gzip -qd "$CPIO/$bn" ;;
+		*.xz)  xz   -qd "$CPIO/$bn" ;;
+		*.zst) zstd -qd "$CPIO/$bn" ;;
+	esac
+	printf '%s\n' "$un" >&3
+done < "$CPIO/modprobe.txt" \
+	3> "$CPIO/modules.conf"
+cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
+rm "$CPIO/modprobe.txt"
+(cd "$CPIO" && find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
+rm -rf "$CPIO"
