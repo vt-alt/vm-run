@@ -1,10 +1,12 @@
 #!/bin/sh
 
+RET=0
 # Strip options to vm-run itself so that warning message will output
 # only real command.
 for opt do
 	shift
 	case "$opt" in
+		--stub-exit=*) RET=${opt#*=} ;;
 		-*) ;;
 		--) break ;;
 		*)  set -- "$opt" "$@"; break ;;
@@ -14,7 +16,7 @@ done
 echo "*****************************************************"
 echo "Warning: vm-run is not supported on your architecture"
 echo "This command will be skipped: $*"
-echo "Assuming it would finish with exit 0"
+echo "Assuming it would finish with exit $RET"
 echo "*****************************************************"
 
-exit 0
+exit $RET

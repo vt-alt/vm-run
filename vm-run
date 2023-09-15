@@ -143,6 +143,7 @@ while [ $# -gt 0 ]; do # opt
 		--swap)      SWAP=y ;;
 		--tmp=*)     TMPFS="${opt#*=}" ;;
 		--stdout)    STDOUT=y ;;
+		--stub-exit=*) ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
 		*)  break ;;
