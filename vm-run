@@ -239,12 +239,13 @@ ppc_opts() {
 }
 
 # Special case for aarch64 host running in aarch32 personality.
-if [ "$HOSTTYPE" = "armh" ] &&
-	kvm_need &&
-	[ -x $ARMH_KVM_OK ] &&
-	$ARMH_KVM_OK; then
-	HOSTTYPE=aarch32
-fi
+case "$HOSTTYPE" in
+	armh | armv7l)
+	if kvm_need && [ -x $ARMH_KVM_OK ] && $ARMH_KVM_OK; then
+		HOSTTYPE=aarch32
+	fi
+	;;
+esac
 
 case "$HOSTTYPE" in
 	powerpc64le)
@@ -288,7 +289,7 @@ case "$HOSTTYPE" in
 		# qemu-system-aarch64: Capacity of the redist regions(123) does not match the number of vcpus(512)
 		MAXCPU=123
 		;;
-	armh)
+	armh | armv7l)
 		PACKAGE=qemu-system-arm-core
 		CONSOLE=ttyAMA0
 		QEMU=qemu-system-arm

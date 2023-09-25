@@ -12,11 +12,13 @@ OPTS=''
 TMOUT=1
 TMOUT_EXIT=2
 unset EXPECT
-if [ "$HOSTTYPE" = "armh" ]; then
+case "$HOSTTYPE" in
+	armh | armv7l)
 	# Special case for aarch64 host running in aarch32 personality.
 	type -p qemu-system-aarch64-bundle >/dev/null && HOSTTYPE=aarch32
 	ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
-fi
+	;;
+esac
 case "$HOSTTYPE" in
 	aarch32)
 		QEMU=qemu-system-aarch64-bundle
@@ -33,7 +35,8 @@ case "$HOSTTYPE" in
 		TMOUT_EXIT=0
 		TMOUT=.1
 		;;
-	armh)   QEMU=qemu-system-arm
+	armh | armv7l)
+		QEMU=qemu-system-arm
 		OPTS=" -M virt"
 		# There is no KVM on armh so it shall always fail.
 		;;
