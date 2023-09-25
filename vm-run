@@ -76,6 +76,8 @@ usage() {
 	echo "    --depmod         Auto-depmod %buildroot installed kernel"
 	echo "    --kernel=        Kernel version to use (--kernels to list)"
 	echo "    --no-quiet       Do not boot kernel too quietly"
+	echo "    --loglevel=      Set loglevel= (implies --no-quiet), when argument isn't a"
+	echo "                     number it enables 'earlyprintk=serial ignore_loglevel' instead."
 	echo "Boot options:"
 	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
 	echo "    --rsync=DIR      rsync DIR over rootfs (for %buildroot)"
@@ -99,6 +101,7 @@ while [ $# -gt 0 ]; do # opt
 		-s|--silent) NOCMD=y TIME= ;;
 		--verbose)   VERBOSE=1 APPEND+=" VERBOSE" ;;
 		--no-quiet)  QUIET= ;;
+		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
 		--sbin)      SBIN=y ;;
 		--udevd)     APPEND+=" UDEVD=y" ;;
 		--qemu=*)    OPTS+=" ${opt#*=}" ;;
@@ -124,7 +127,6 @@ while [ $# -gt 0 ]; do # opt
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
-		--loglevel=*) LOGLEVEL="${opt#*=}" ;;
 		--multidevs=*) MULTIDEVS="${opt#*=}" ;;
 		--modules=*) MODULES+=" ${opt#*=}" ;;
 		--create-rootfs=*) ROOTFS="${opt#*=}"; ROOTFSCREATE=y ;;
@@ -768,6 +770,8 @@ if [ -v LOGLEVEL ]; then
 	else
 		APPEND+=" earlyprintk=serial ignore_loglevel"
 	fi
+	[[ "$LOGLEVEL" =~ debug ]] && APPEND+=" debug"
+	[[ "$LOGLEVEL" =~ initcall ]] && APPEND+=" initcall_debug"
 fi
 
 # QEMU Monitor is available (through character backend multiplexer), keys:
