@@ -39,6 +39,7 @@ NOBIND=
 DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
+BASHMINUS=-ex
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC
 
 usage() {
@@ -146,6 +147,7 @@ while [ $# -gt 0 ]; do # opt
 		--tmp=*)     TMPFS="${opt#*=}" ;;
 		--stdout)    STDOUT=y ;;
 		--stub-exit=*) ;;
+		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
 		*)  break ;;
@@ -186,9 +188,10 @@ if [ -v TMPDIR ] && [ "$TMPDIR" = '/usr/src/tmp' ]; then
 	printf "TMPDIR=/tmp\n" >> $SCRIPT
 fi
 printf "cd %q\n" "$PWD" >> $SCRIPT
-printf "eval" >> $SCRIPT
-printf  " %q" "$@" >> $SCRIPT
-printf  "\n" >> $SCRIPT
+printf "(eval" >> $SCRIPT
+printf ' "set %s;"' "$BASHMINUS" >> $SCRIPT
+printf " %q" "$@" >> $SCRIPT
+printf ")\n" >> $SCRIPT
 # Flush console.
 printf  "RET=\$?\nstty sane\nexit \$RET\n" >> $SCRIPT
 chmod a+rx $SCRIPT
