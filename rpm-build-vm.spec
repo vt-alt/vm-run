@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.56
+Version: 1.57
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -239,6 +239,11 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Mon Sep 25 2023 Vitaly Chikunov <vt@altlinux.org> 1.57-alt1
+- Enhance and document --loglevel= (for boot debugging).
+- Run (eval) command in a subshell with 'set -ex' by default.
+- armh: Fix 'architecture armv7l is unknown' error.
+
 * Fri Sep 15 2023 Vitaly Chikunov <vt@altlinux.org> 1.56-alt1
 - Add --stub-exit= option for vm-run stub (ALT#47599).
 
