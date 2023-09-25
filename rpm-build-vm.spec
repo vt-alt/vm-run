@@ -222,7 +222,7 @@ rm /tmp/vm-tmpfs.qcow2
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 rmdir /mnt/0
 rm /usr/src/ext4.0.img
-! timeout --preserve-status 300 vm-run --verbose exit 1
+! timeout --preserve-status 300 vm-run --verbose exit 1 || exit 1
 timeout 300 vm-run --rootfs --verbose df
 rm /tmp/vm-ext4.img
 timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep Unknown'
