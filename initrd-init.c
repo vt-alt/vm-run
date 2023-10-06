@@ -254,10 +254,10 @@ int main(int argc, char **argv)
 		xerrno(errno, "mkdir '%s'", newroot);
 
 	get_cmdline();
-	char *root = get_option("root");
+	const char *root = get_option("root");
+	const char *rootfstype = get_option("rootfstype");
+	const char *rootflags  = get_option("rootflags");
 	if (root) {
-		const char *rootfstype = get_option("rootfstype");
-		const char *rootflags  = get_option("rootflags");
 		mount_devtmpfs();
 		if (strncmp(root, "/dev/", 5)) {
 			mount_sys();
@@ -279,25 +279,21 @@ int main(int argc, char **argv)
 					rootfstype = type;
 			}
 		}
-		if (debug)
-			warn(0, "mount %s from %s to %s flags '%s'", rootfstype, root, newroot,
-			    rootflags);
-		if (mount(root, newroot, rootfstype, 0, rootflags))
-			xerrno(errno, "mount root=%s (type=%s flags=%s)", root,
-			       rootfstype, rootflags);
 	} else {
 		char *mount_tag = find_mount_tag();
 		if (mount_tag) {
-			char *flags = "version=9p2000.L,trans=virtio,access=any,msize=262144";
-			if (debug)
-				warn(0, "mount 9p from %s to %s flags '%s'", mount_tag, newroot,
-				    flags);
-			if (mount(mount_tag, newroot, "9p", 0, flags)) {
-				xerrno(errno, "mount root %s", mount_tag);
-			}
+			rootflags = "version=9p2000.L,trans=virtio,access=any,msize=262144";
+			rootfstype = "9p";
+			root = mount_tag;
 		} else
 			xerrno(0, "rootfs not found.");
 	}
+
+	if (debug)
+		warn(0, "mount %s from %s to %s flags '%s'", rootfstype, root, newroot,
+		    rootflags ?: "");
+	if (mount(root, newroot, rootfstype, 0, rootflags))
+		xerrno(errno, "mount root=%s (type=%s flags=%s)", root, rootfstype, rootflags);
 
 	if (debug)
 		warn(0, "switch root");
