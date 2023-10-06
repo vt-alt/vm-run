@@ -14,6 +14,7 @@ show_usage()
 	echo
 	echo "  -b, --basedir=     Modules basedir (where /lib/modules located)."
 	echo "  --modules=         Add modules into IMAGE."
+	echo "  --add=X[:Y]        Add file/dir X into IMAGE at path Y."
 	echo "  -v, --verbose      Increase verbosity level."
 	echo "  -h, --help         This help."
 	exit "$@"
@@ -35,6 +36,7 @@ fatal() {
 ROOT=
 MODULES=
 VERBOSE=
+FILES=
 
 args=()
 while [ $# -gt 0 ]; do # opt
@@ -44,6 +46,7 @@ while [ $# -gt 0 ]; do # opt
 		--basedir=*)	ROOT=$arg ;;
 		-b)		shift; ROOT="${1?"$opt requires argument"}" ;;
 		--modules=*)	MODULES+=" $arg" ;;
+		--add=*)	FILES+=" $arg" ;;
 		-v | --verbose)	VERBOSE=1 ;;
 		-h | --help)	show_usage ;;
 		--)		shift; break ;;
@@ -92,7 +95,17 @@ while read -r _ f; do
 	printf '%s\n' "$un" >&3
 done < "$CPIO/modprobe.txt" \
 	3> "$CPIO/modules.conf"
-cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
 rm "$CPIO/modprobe.txt"
+cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
+for f in $FILES; do
+	ff=${f%:*}
+	ft=${f#"$ff"}
+	ft=${ft#:}
+	[[ "$ft" =~ /$ ]] && ft+=$(basename "$ff")
+	[ -n "$ft" ] || ft=$ff
+	mkdir -p "$(dirname "$CPIO/$ft")"
+	cp -a "$ff" -T "$CPIO/$ft"
+done
+
 (cd "$CPIO" && find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
 rm -rf "$CPIO"

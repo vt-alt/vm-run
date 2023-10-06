@@ -32,6 +32,7 @@ ARMH_KVM_OK=/usr/bin/qemu-system-aarch64-bundle-kvm-ok
 SANDBOX=on,spawn=deny
 MULTIDEVS=remap
 MODULES=
+RDADD=
 ROOTFS_DEF_IMAGE=/tmp/vm-ext4.img
 ROOTFS=
 ROOTFSCREATE=
@@ -79,6 +80,9 @@ usage() {
 	echo "    --no-quiet       Do not boot kernel too quietly"
 	echo "    --loglevel=      Set loglevel= (implies --no-quiet), when argument isn't a"
 	echo "                     number it enables 'earlyprintk=serial ignore_loglevel' instead."
+	echo "Initrd options:"
+	echo "    --modules='...'  Load named modules (space separated) in initrd."
+	echo "    --rdadd=X[:Y]    Add file/dir X into initrd at Y."
 	echo "Boot options:"
 	echo "    --no-bind        Don't bind mount /usr/src from 9p (in rootfs mode)"
 	echo "    --rsync=DIR      rsync DIR over rootfs (for %buildroot)"
@@ -130,6 +134,7 @@ while [ $# -gt 0 ]; do # opt
 		--depmod)    DEPMOD=y ;;
 		--multidevs=*) MULTIDEVS="${opt#*=}" ;;
 		--modules=*) MODULES+=" ${opt#*=}" ;;
+		--rdadd=*)   RDADD+=" ${opt#*=}" ;;
 		--create-rootfs=*) ROOTFS="${opt#*=}"; ROOTFSCREATE=y ;;
 		--rootfs=*)  ROOTFS="${opt#*=}" ;;
 		--rootfs)    ROOTFS=$ROOTFS_DEF_IMAGE ;;
@@ -762,7 +767,7 @@ if [ ! -f "${INITRD-}" ]; then
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
 	[ "$VIRTIOBUS" = "pci" ] && MODULES+=" virtio_pci" || MODULES+=" virtio_mmio"
-	vm-initrd --modules="$MODULES" --basedir="$ROOT" ${VERBOSE:+-v} "$INITRD" "$KVER"
+	vm-initrd --modules="$MODULES" --basedir="$ROOT" --add="$RDADD" ${VERBOSE:+-v} "$INITRD" "$KVER"
 	unset CPIO MODULES KVER skip f bn un
 fi
 unset ROOT

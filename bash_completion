@@ -37,7 +37,7 @@ _vm_run()
             COMPREPLY=( $(compgen -d -- "$cur") )
             return
             ;;
-        --drive= | --rootfs=)
+        --drive= | --rootfs= | --rdadd=)
             compopt -o filenames 2>/dev/null
             COMPREPLY=( $(compgen -f -- "$cur") )
             return
