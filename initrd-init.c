@@ -24,6 +24,7 @@
 
 # define init_module(image, len, param) syscall(__NR_init_module, image, len, param)
 
+static int debug = 0;
 static char *newroot = "/newroot";
 static char *modules = "modules.conf";
 static char *vm_init = "/usr/lib/vm-run/vm-init";
@@ -33,6 +34,7 @@ static void warn(int err, const char *fmt, ...)
 {
 	va_list args;
 
+	printf("init: ");
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
@@ -47,6 +49,7 @@ static void xerrno(int err, const char *fmt, ...)
 {
 	va_list args;
 
+	printf("init: ");
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
@@ -66,7 +69,7 @@ static int _modprobe(void)
 
 	FILE *fd = fopen(modules, "r");
 	if (!fd) {
-		printf("open '%s': %s", modules, strerror(errno));
+		warn(errno, "open '%s'", modules);
 		return 0;
 	}
 	char buf[256];
@@ -74,7 +77,7 @@ static int _modprobe(void)
 		buf[strlen(buf) - 1] = '\0';
 		int f = open(buf, O_RDONLY | O_CLOEXEC);
 		if (f < 0) {
-			printf("open '%s' failed %s\n", buf, strerror(errno));
+			warn(errno, "open '%s'", buf);
 			continue;
 		}
 		struct stat st;
@@ -86,12 +89,19 @@ static int _modprobe(void)
 		if (read(f, image, st.st_size) != st.st_size)
 			xerrno(errno, "read %ld bytes from '%s'", st.st_size, buf);
 		close(f);
+		if (debug)
+			warn(0, "insmod '%s'", buf);
 		int r = init_module(image, st.st_size, "");
 		if (!r) {
 			loaded++;
-		} else if (errno != EEXIST && !(failed && errno == ENOENT)) {
-			printf("init_module '%s' %s\n", buf, strerror(errno));
-			failed++;
+		} else {
+			int printerr = 0;
+			if (errno != EEXIST && !(failed && errno == ENOENT)) {
+				failed++;
+				printerr++;
+			}
+			if (printerr || debug)
+				warn(errno, "init_module '%s'", buf);
 		}
 		free(image);
 	}
@@ -102,7 +112,7 @@ static void modprobe(void)
 {
 	/* Load while it loads, to workaround intermittent load ordering failures. */
 	while (_modprobe())
-		printf("Retry modules loading.\n");
+		warn(0, "Retry modules loading.");
 }
 
 #define COMMAND_LINE_SIZE 2048
@@ -112,6 +122,8 @@ void get_cmdline(void)
 	const char *proc = "/proc";
 	if (mkdir(proc, 0755))
 		xerrno(errno, "mkdir '%s'", proc);
+	if (debug)
+		warn(0, "mount proc to %s (for cmdline)", proc);
 	if (mount("proc", proc, "proc", 0, NULL))
 		xerrno(errno, "mount '%s'", proc);
 	const char *proc_cmdline = "/proc/cmdline";
@@ -169,6 +181,8 @@ static void mount_sys(void)
 	const char *sys = "/sys";
 	if (mkdir(sys, 0755))
 		xerrno(errno, "mkdir '%s'", sys);
+	if (debug)
+		warn(0, "mount sysfs to %s", sys);
 	if (mount("sysfs", sys, "sysfs", 0, NULL))
 		warn(errno, "mount '%s'", sys);
 }
@@ -205,6 +219,8 @@ static void mount_devtmpfs()
 
 	if (mkdir(dev, 0755) && errno != EEXIST)
 		xerrno(errno, "mkdir '%s'", dev);
+	if (debug)
+		warn(0, "mount devtmpfs to %s", dev);
 	if (mount("devtmpfs", dev, "devtmpfs", 0, NULL))
 		xerrno(errno, "mount %s", dev);
 	/* Will not be able to umount it, but it will disappear after
@@ -213,6 +229,13 @@ static void mount_devtmpfs()
 
 int main(int argc, char **argv)
 {
+	/* We want to enable debug as early as possible. */
+	for (int i = 0; i < argc; i++)
+		if (strcmp(argv[i], "rddebug") == 0)
+			debug++;
+	if (debug)
+		warn(0, "vm-run initrd");
+
 	/* poweroff is not always installed. */
 	if (argc > 0 && !strcmp(argv[0], "poweroff"))
 		reboot(RB_POWER_OFF);
@@ -256,19 +279,28 @@ int main(int argc, char **argv)
 					rootfstype = type;
 			}
 		}
+		if (debug)
+			warn(0, "mount %s from %s to %s flags '%s'", rootfstype, root, newroot,
+			    rootflags);
 		if (mount(root, newroot, rootfstype, 0, rootflags))
 			xerrno(errno, "mount root=%s (type=%s flags=%s)", root,
 			       rootfstype, rootflags);
 	} else {
 		char *mount_tag = find_mount_tag();
 		if (mount_tag) {
-			if (mount(mount_tag, newroot, "9p", 0,
-				  "version=9p2000.L,trans=virtio,access=any,msize=262144")) {
+			char *flags = "version=9p2000.L,trans=virtio,access=any,msize=262144";
+			if (debug)
+				warn(0, "mount 9p from %s to %s flags '%s'", mount_tag, newroot,
+				    flags);
+			if (mount(mount_tag, newroot, "9p", 0, flags)) {
 				xerrno(errno, "mount root %s", mount_tag);
 			}
 		} else
 			xerrno(0, "rootfs not found.");
 	}
+
+	if (debug)
+		warn(0, "switch root");
 
 	struct stat st1, st2;
 	if (chdir(newroot) ||
@@ -289,6 +321,8 @@ int main(int argc, char **argv)
 	char *init = get_option("init");
 	if (!init)
 		init = vm_init;
+	if (debug)
+		warn(0, "exec '%s'", init);
 	char * const args[] = { init, NULL };
 	execv(init, args);
 	xerrno(errno, "execv '%s'", init);

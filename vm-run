@@ -774,7 +774,8 @@ if [ -v LOGLEVEL ]; then
 	else
 		APPEND+=" earlyprintk=serial ignore_loglevel"
 	fi
-	[[ "$LOGLEVEL" =~ debug ]] && APPEND+=" debug"
+	[[ "$LOGLEVEL" =~ debug ]] && APPEND+=" debug rddebug"
+	[[ "$LOGLEVEL" =~ xtrace ]] && APPEND+=" SHELLOPTS=xtrace"
 	[[ "$LOGLEVEL" =~ initcall ]] && APPEND+=" initcall_debug"
 fi
 
