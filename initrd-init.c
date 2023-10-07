@@ -6,6 +6,7 @@
  * Copyright (c) 2020-2022 Vitaly Chikunov <vt@altlinux.org>
  */
 
+#include <blkid/blkid.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,8 +20,8 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/vfs.h>
+#include <termios.h>
 #include <unistd.h>
-#include <blkid/blkid.h>
 
 # define init_module(image, len, param) syscall(__NR_init_module, image, len, param)
 
@@ -99,6 +100,11 @@ static int exec_rdshell(void)
 	/* Make user slightly more happy by setting some env. */
 	setenv("PS1", "rdshell# ", 0);
 	setenv("PATH", SYS_PATH, 0);
+	struct termios ti;
+	if (tcgetattr(0, &ti) == 0) {
+		ti.c_cc[VERASE] = 8;
+		tcsetattr(0, TCSANOW, &ti);
+	}
 
 	try_executable(rdshell);
 	if (strcmp("sh", rdshell) == 0) {
