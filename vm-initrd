@@ -86,7 +86,8 @@ if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt";
 	fi
 	exit 1
 fi
-while read -r _ f; do
+while read -r j f; do
+	[ "$j" = "insmod" ] || continue
 	bn=${f##*/}
 	un=${bn%.?z}
 	[ -e "$CPIO/$un" ] && continue
