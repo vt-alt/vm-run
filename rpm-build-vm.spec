@@ -240,7 +240,6 @@ ls -l /dev/kvm && test -w /dev/kvm
 
 %changelog
 * Sat Oct 07 2023 Vitaly Chikunov <vt@altlinux.org> 1.58-alt1
-- Fix "adding" built-in modules into initrd (centos).
 - Fix booting ext4 on kernels where it isn't built-in (ovz-el7).
 - Do not ignore initrd generation errors.
 - Allow adding arbitrary files into initrd (such as toybox).
