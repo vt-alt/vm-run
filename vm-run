@@ -767,7 +767,10 @@ if [ ! -f "${INITRD-}" ]; then
 	fi
 	INITRD=${TMPDIR:-/tmp}/initramfs-$KVER.img
 	[ "$VIRTIOBUS" = "pci" ] && MODULES+=" virtio_pci" || MODULES+=" virtio_mmio"
-	vm-initrd --modules="$MODULES" --basedir="$ROOT" --add="$RDADD" ${VERBOSE:+-v} "$INITRD" "$KVER"
+	vm-initrd --modules="$MODULES" --basedir="$ROOT" --add="$RDADD" ${VERBOSE:+-v} "$INITRD" "$KVER" || {
+		echo "Error: Some errors ($?) while generating initrd." >&2
+		exit 1
+	}
 	unset CPIO MODULES KVER skip f bn un
 fi
 unset ROOT

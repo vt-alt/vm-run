@@ -7,6 +7,8 @@
 #
 # shellcheck disable=SC2155,SC2207,SC2128
 
+set -eo pipefail
+
 show_usage()
 {
 	echo "Usage: $0 [OPTIONS...] IMAGE [KERNEL_VERSION]"
@@ -70,6 +72,9 @@ fi
 
 [ $# -eq 0 ] || fatal "Exceeding options: $*"
 
+# Will continue generating initrd on file copying failures, but report failure (2) at exit.
+RET=0
+
 CPIO=$(mktemp -d)
 # shellcheck disable=SC2086
 if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
@@ -86,7 +91,7 @@ while read -r _ f; do
 	un=${bn%.?z}
 	[ -e "$CPIO/$un" ] && continue
 	[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
-	cp -au "$f" "$CPIO/" 2>/dev/null || continue
+	cp -au "$f" -t "$CPIO" 2>/dev/null || { RET=2; continue; }
 	case "$bn" in
 		*.gz)  gzip -qd "$CPIO/$bn" ;;
 		*.xz)  xz   -qd "$CPIO/$bn" ;;
@@ -96,7 +101,7 @@ while read -r _ f; do
 done < "$CPIO/modprobe.txt" \
 	3> "$CPIO/modules.conf"
 rm "$CPIO/modprobe.txt"
-cp -au /usr/lib/vm-run/initrd-init "$CPIO/init"
+cp -au /usr/lib/vm-run/initrd-init -T "$CPIO/init" || RET=2
 for f in $FILES; do
 	ff=${f%:*}
 	ft=${f#"$ff"}
@@ -104,8 +109,9 @@ for f in $FILES; do
 	[[ "$ft" =~ /$ ]] && ft+=$(basename "$ff")
 	[ -n "$ft" ] || ft=$ff
 	mkdir -p "$(dirname "$CPIO/$ft")"
-	cp -a "$ff" -T "$CPIO/$ft"
+	cp -a "$ff" -T "$CPIO/$ft" || RET=2
 done
 
 (cd "$CPIO" && find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
 rm -rf "$CPIO"
+exit $RET
