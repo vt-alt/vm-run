@@ -545,6 +545,7 @@ if [ -n "$ROOTFS" ]; then
 		echo "Error: ext4 filesystem not found in '$ROOTFSFILE'." >&2
 		exit 1
 	fi
+	MODULES+=" $TYPE"
 	OPTS+=" -drive file=$ROOTFSFILE"
 	if [ ! -w "$ROOTFSFILE" ]; then
 		if [ -v NOSNAPSHOT ]; then
