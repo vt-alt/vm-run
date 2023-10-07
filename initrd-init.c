@@ -47,17 +47,65 @@ static void warn(int err, const char *fmt, ...)
 		printf("\n");
 }
 
+static void runner(char *pathname)
+{
+	char *argv0 = pathname;
+	if (strstr(pathname, "box")) {
+		/* Perhaps we don't want to run raw toybox but a shell from it. */
+		argv0 = "sh";
+	}
+	char * const args[] = { argv0, NULL };
+	if (debug)
+		warn(0, "try %s [%s]", pathname, argv0);
+	execv(pathname, args);
+	if (debug)
+		warn(errno, "execv '%s'", pathname);
+}
+
+#define SYS_PATH "/sbin:/usr/sbin:/bin:/usr/bin"
+static void try_executable(char *binary)
+{
+	if (strstr(binary, "/")) {
+		runner(binary);
+		return;
+	}
+	/* Also try to run from '/'. */
+	char *path = strdup(SYS_PATH ":/");
+	if (!path) {
+		warn(errno, "strdup");
+		return;
+	}
+	for (char *tok = strtok(path, ":"); tok; tok = strtok(NULL, ":")) {
+		char *where;
+		if (tok[0] == '/' && tok[1] == '\0')
+			*tok = '\0';
+		if (asprintf(&where, "%s/%s", tok, binary) != -1) {
+			if (access(where, X_OK) == 0)
+				runner(where);
+			free(where);
+		} else
+			warn(errno, "asprintf");
+	}
+	free(path);
+	if (debug)
+		warn(ENOENT, "exec '%s'", binary);
+}
+
 static int exec_rdshell(void)
 {
 	if (!rdshell)
 		return 0;
-	warn(0, "exec rdshell '%s'", rdshell);
-	/* Make user slightly more happy. */
+	warn(0, "launching rdshell (%s)", rdshell);
+	/* Make user slightly more happy by setting some env. */
 	setenv("PS1", "rdshell# ", 0);
-	setenv("PATH", "/sbin:/usr/sbin:/bin:/usr/bin", 0);
-	char * const args[] = { rdshell, NULL };
-	execv(rdshell, args);
-	warn(errno, "exec rdshell");
+	setenv("PATH", SYS_PATH, 0);
+
+	try_executable(rdshell);
+	if (strcmp("sh", rdshell) == 0) {
+		try_executable("toybox");
+		try_executable("busybox");
+	}
+	warn(0, "rdshell failed");
 	return -1;
 }
 
