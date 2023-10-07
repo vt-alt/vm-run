@@ -90,6 +90,7 @@ while read -r j f; do
 	[ "$j" = "insmod" ] || continue
 	bn=${f##*/}
 	un=${bn%.?z}
+	un=${bn%.zst}
 	[ -e "$CPIO/$un" ] && continue
 	[ -n "$VERBOSE" ] && echo >&2 "initrd: Adding module $f"
 	cp -au "$f" -t "$CPIO" 2>/dev/null || { RET=2; continue; }
