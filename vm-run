@@ -41,7 +41,7 @@ DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
 BASHMINUS=-ex
-unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -91,6 +91,7 @@ usage() {
 	echo "    --user           Run under user instead of root (implies --sudo)"
 	echo "    --udevd          Start udevd"
 	echo # Other options
+	echo "    --heredoc        Read script from stdin (for here-documents)"
 	echo "    --stdout         Output everything to stderr except command's stdout"
 	echo "    -h, --help       This help"
 	echo "    --verbose        Show vm actions verbosely"
@@ -152,6 +153,7 @@ while [ $# -gt 0 ]; do # opt
 		--tmp=*)     TMPFS="${opt#*=}" ;;
 		--stdout)    STDOUT=y ;;
 		--stub-exit=*) ;;
+		--heredoc)   HEREDOC=y ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
@@ -161,7 +163,7 @@ while [ $# -gt 0 ]; do # opt
 done
 
 # If no command run shell
-if [ -z "$*" ]; then
+if [ -z "$*" ] && [ ! -v HEREDOC ]; then
 	set bash
 	SBIN=y
 fi
@@ -195,7 +197,15 @@ fi
 printf "cd %q\n" "$PWD" >> $SCRIPT
 printf "(eval" >> $SCRIPT
 printf ' "set %s;"' "$BASHMINUS" >> $SCRIPT
-printf " %q" "$@" >> $SCRIPT
+if [ -v HEREDOC ]; then
+	if [ $# -gt 0 ]; then
+		echo "Error: In heredoc mode, there should not be commands on command-line."
+		exit 1
+	fi
+	printf " %q" "$(cat)" >> $SCRIPT
+else
+	printf " %q" "$@" >> $SCRIPT
+fi
 printf ")\n" >> $SCRIPT
 # Flush console.
 printf  "RET=\$?\nstty sane\nexit \$RET\n" >> $SCRIPT
