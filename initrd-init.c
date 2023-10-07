@@ -64,7 +64,8 @@ static int exec_rdshell(void)
 static void terminate()
 {
 	sleep(1);
-	reboot(RB_POWER_OFF);
+	if (reboot(RB_POWER_OFF) == -1)
+		warn(errno, "reboot");
 	exit(1);
 }
 
