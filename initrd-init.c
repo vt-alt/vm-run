@@ -25,9 +25,12 @@
 # define init_module(image, len, param) syscall(__NR_init_module, image, len, param)
 
 static int debug = 0;
+static char *rdshell = NULL;
+
 static char *newroot = "/newroot";
 static char *modules = "modules.conf";
 static char *vm_init = "/usr/lib/vm-run/vm-init";
+
 
 __attribute__ ((format (printf, 2, 3)))
 static void warn(int err, const char *fmt, ...)
@@ -44,6 +47,27 @@ static void warn(int err, const char *fmt, ...)
 		printf("\n");
 }
 
+static int exec_rdshell(void)
+{
+	if (!rdshell)
+		return 0;
+	warn(0, "exec rdshell '%s'", rdshell);
+	/* Make user slightly more happy. */
+	setenv("PS1", "rdshell# ", 0);
+	setenv("PATH", "/sbin:/usr/sbin:/bin:/usr/bin", 0);
+	char * const args[] = { rdshell, NULL };
+	execv(rdshell, args);
+	warn(errno, "exec rdshell");
+	return -1;
+}
+
+static void terminate()
+{
+	sleep(1);
+	reboot(RB_POWER_OFF);
+	exit(1);
+}
+
 __attribute__ ((format (printf, 2, 3)))
 static void xerrno(int err, const char *fmt, ...)
 {
@@ -58,9 +82,8 @@ static void xerrno(int err, const char *fmt, ...)
 	else
 		printf("\n");
 
-	sleep(1);
-	reboot(RB_POWER_OFF);
-	exit(1);
+	exec_rdshell();
+	terminate();
 }
 
 static int _modprobe(void)
@@ -134,7 +157,8 @@ void get_cmdline(void)
 		xerrno(errno, "read error '%s'", proc_cmdline);
 	if (fclose(fd) == EOF)
 		warn(errno, "fclose '%s'", proc_cmdline);
-	if (umount(proc) == -1)
+	/* Do not unmount in rdshell mode. */
+	if (!rdshell && umount(proc) == -1)
 		warn(errno, "umount '%s'", proc);
 }
 
@@ -229,12 +253,16 @@ static void mount_devtmpfs()
 
 int main(int argc, char **argv)
 {
-	/* We want to enable debug as early as possible. */
-	for (int i = 0; i < argc; i++)
+	/* We want to enable debug options as early as possible. */
+	rdshell = getenv("rdshell");
+	for (int i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "rddebug") == 0)
 			debug++;
+		else if (strcmp(argv[i], "rdshell") == 0)
+			rdshell = "sh";
+	}
 	if (debug)
-		warn(0, "vm-run initrd");
+		warn(0, "vm-run initrd%s", rdshell ? " [rdshell]" : "");
 
 	/* poweroff is not always installed. */
 	if (argc > 0 && !strcmp(argv[0], "poweroff"))
@@ -294,6 +322,10 @@ int main(int argc, char **argv)
 		    rootflags ?: "");
 	if (mount(root, newroot, rootfstype, 0, rootflags))
 		xerrno(errno, "mount root=%s (type=%s flags=%s)", root, rootfstype, rootflags);
+
+	if (exec_rdshell())
+		terminate();
+	/* If you really want rdshell after this point use `init=` instead. */
 
 	if (debug)
 		warn(0, "switch root");
