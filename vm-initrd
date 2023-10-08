@@ -84,6 +84,7 @@ for m in $MODULES; do
 		# Installed module doesn't have '.ko' in the name.
 		MODS+=" $m"
 	else
+		[ "${m#*/}" != "$m" ] || [ ! -e "$m" ] || m="./$m"
 		# Non-installed module.
 		depends=$(/sbin/modinfo -b "$ROOT" -k "$KVER" "$m" -F depends)
 		MODS+=" $depends"
