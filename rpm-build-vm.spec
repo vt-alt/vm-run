@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (C) 2019 Vitaly Chikunov <vt@altlinux.org>
+# Copyright (C) 2019-2023 Vitaly Chikunov <vt@altlinux.org>
 %define _unpackaged_files_terminate_build 1
 %define _stripped_files_terminate_build 1
 

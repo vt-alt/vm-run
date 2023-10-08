@@ -3,7 +3,7 @@
  * Simplistic initramfs init
  * Based on switch_root.c by Rob Landley.
  *
- * Copyright (c) 2020-2022 Vitaly Chikunov <vt@altlinux.org>
+ * Copyright (c) 2020-2023 Vitaly Chikunov <vt@altlinux.org>
  */
 
 #include <blkid/blkid.h>

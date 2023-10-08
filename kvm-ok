@@ -3,7 +3,7 @@
 #
 # Test availability of KVM for vm-run
 #
-# Copyright (C) 2022 Vitaly Chikunov <vt@altlinux.org>
+# Copyright (C) 2022-2023 Vitaly Chikunov <vt@altlinux.org>
 
 # ERROR: ld.so: object 'libfakeroot.so' from LD_PRELOAD cannot be preloaded (cannot open shared object file): ignored.
 unset LD_PRELOAD

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Create ext4 image out of file tree
-# Copyright (c) 2022 Vitaly Chikunov <vt@altlinux.org>
+# Copyright (c) 2022-2023 Vitaly Chikunov <vt@altlinux.org>
 # Inspired by the work of Leonid Krivoshein <klark@altlinux.org> on usermode-fs-tools.
 
 set -efu
