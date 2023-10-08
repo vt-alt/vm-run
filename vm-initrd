@@ -76,6 +76,27 @@ fi
 RET=0
 
 CPIO=$(mktemp -d)
+
+# Pre-parse to catch dependencies of non-installed modules.
+MODS=
+for m in $MODULES; do
+	if [ -n "${m#*.ko*}" ]; then
+		# Installed module doesn't have '.ko' in the name.
+		MODS+=" $m"
+	else
+		# Non-installed module.
+		depends=$(/sbin/modinfo -b "$ROOT" -k "$KVER" "$m" -F depends)
+		MODS+=" $depends"
+		softdep=$(/sbin/modinfo -b "$ROOT" -k "$KVER" "$m" -F softdep)
+		pre=${softdep#*pre:}
+		pre=${pre%post:*}
+		post=${softdep#*post:}
+		post=${post%pre:*}
+		MODS+=" $pre $m $post"
+	fi
+done
+MODULES=$MODS
+unset MODS
 # shellcheck disable=SC2086
 if ! /sbin/modprobe -d "$ROOT" -S "$KVER" -D -a $MODULES > "$CPIO/modprobe.txt"; then
 	echo "Error: modprobe failure." >&2
