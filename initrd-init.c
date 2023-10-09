@@ -32,6 +32,7 @@ static char *newroot = "/newroot";
 static char *modules = "modules.conf";
 static char *vm_init = "/usr/lib/vm-run/vm-init";
 
+static char *get_option(const char *opt);
 
 __attribute__ ((format (printf, 2, 3)))
 static void warn(int err, const char *fmt, ...)
@@ -105,7 +106,24 @@ static int exec_rdshell(void)
 		ti.c_cc[VERASE] = 8;
 		tcsetattr(0, TCSANOW, &ti);
 	}
-
+	char *tty = get_option("console"); /* Only a 1st. */
+	if (tty && *tty) {
+		if (*tty != '/' && asprintf(&tty, "/dev/%s", tty) == -1)
+			goto notty;
+		/* New session because SID 0 cannot acquire CTTY. */
+		setsid();
+		/* Automatically becomes CTTY. */
+		int fd = open(tty, O_RDWR);
+		if (fd != -1) {
+			dup2(fd, 0);
+			dup2(fd, 1);
+			dup2(fd, 2);
+			if (fd > 2)
+				close(fd);
+		} else
+			warn(errno, "open '%s'", tty);
+	}
+notty:
 	try_executable(rdshell);
 	if (strcmp("sh", rdshell) == 0) {
 		try_executable("toybox");
