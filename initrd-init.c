@@ -340,8 +340,9 @@ int main(int argc, char **argv)
 	const char *root = get_option("root");
 	const char *rootfstype = get_option("rootfstype");
 	const char *rootflags  = get_option("rootflags");
-	if (root) {
+	if (root || rdshell)
 		mount_devtmpfs();
+	if (root) {
 		if (strncmp(root, "/dev/", 5)) {
 			mount_sys();
 			/* Tag formats are in findfs(8). */
