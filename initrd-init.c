@@ -201,7 +201,7 @@ void get_cmdline(void)
 	if (mkdir(proc, 0755))
 		xerrno(errno, "mkdir '%s'", proc);
 	if (debug)
-		warn(0, "mount proc to %s (for cmdline)", proc);
+		warn(0, "mount proc to %s", proc);
 	if (mount("proc", proc, "proc", 0, NULL))
 		xerrno(errno, "mount '%s'", proc);
 	const char *proc_cmdline = "/proc/cmdline";
@@ -212,9 +212,6 @@ void get_cmdline(void)
 		xerrno(errno, "read error '%s'", proc_cmdline);
 	if (fclose(fd) == EOF)
 		warn(errno, "fclose '%s'", proc_cmdline);
-	/* Do not unmount in rdshell mode. */
-	if (!rdshell && umount(proc) == -1)
-		warn(errno, "umount '%s'", proc);
 }
 
 /* Get value of cmdline option. Options w/o value are skipped. */
