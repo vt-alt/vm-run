@@ -93,6 +93,22 @@ static void try_executable(char *binary)
 		warn(ENOENT, "exec '%s'", binary);
 }
 
+/* Quietly update loglevel=, but do not override what user requested. */
+static void loglevel(const char *level)
+{
+	const char *ll = get_option("loglevel");;
+	if (ll)
+		return;
+	const int fd = open("/proc/sys/kernel/printk", O_WRONLY);
+	if (fd == -1) {
+		warn(errno, "open printk");
+		return;
+	}
+	if (write(fd, level, strlen(level)) == -1)
+		warn(errno, "write printk");
+	close(fd);
+}
+
 static int exec_rdshell(void)
 {
 	if (!rdshell)
@@ -106,6 +122,7 @@ static int exec_rdshell(void)
 		ti.c_cc[VERASE] = 8;
 		tcsetattr(0, TCSANOW, &ti);
 	}
+	loglevel("8");
 	char *tty = get_option("console"); /* Only a 1st. */
 	if (tty && *tty) {
 		if (*tty != '/' && asprintf(&tty, "/dev/%s", tty) == -1)
@@ -346,12 +363,14 @@ int main(int argc, char **argv)
 	    (stfs.f_type != 0x01021994 && stfs.f_type != 0x858458f6))
 		xerrno(0, "root is not tmpfs or ramfs");
 
+	get_cmdline();
+	if (debug)
+		loglevel("8");
 	modprobe();
 
 	if (mkdir(newroot, 0755))
 		xerrno(errno, "mkdir '%s'", newroot);
 
-	get_cmdline();
 	const char *root = get_option("root");
 	const char *rootfstype = get_option("rootfstype");
 	const char *rootflags  = get_option("rootflags");
