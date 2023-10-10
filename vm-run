@@ -606,6 +606,7 @@ fi
 # from 9p:/, thus 9p modules should be already loaded.
 MODULES+=" 9p 9pnet_virtio"
 
+unset rd_etc_profile
 if [ -v RDSHELL ]; then
 	APPEND+=" rdshell"
 	for i in busybox toybox; do
@@ -614,6 +615,11 @@ if [ -v RDSHELL ]; then
 	if [ -n "${CMD:-}" ]; then
 		# If it's somewhere else in PATH put it in /bin so initrd can find it.
 		RDADD+=" $CMD:/bin/$(basename "$CMD")"
+		rd_etc_profile=$(mktemp --suffix=.rdshell)
+		cat <<-'EOF' > "$rd_etc_profile"
+			[ $$ -ne 1 ] || trap "poweroff -f" EXIT
+		EOF
+		RDADD+=" $rd_etc_profile:/etc/profile"
 	else
 		echo "Error: busybox/toybox executable not found in PATH."
 		exit 1
@@ -801,6 +807,7 @@ if [ ! -f "${INITRD-}" ]; then
 	unset CPIO MODULES KVER skip f bn un
 fi
 unset ROOT
+[ -v rd_etc_profile ] && rm "$rd_etc_profile"
 
 if [ -v LOGLEVEL ]; then
 	QUIET=

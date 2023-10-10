@@ -54,7 +54,7 @@ static void runner(char *pathname)
 	char *argv0 = pathname;
 	if (strstr(pathname, "box")) {
 		/* Perhaps we don't want to run raw toybox but a shell from it. */
-		argv0 = "sh";
+		argv0 = "-sh";
 	}
 	char * const args[] = { argv0, NULL };
 	if (debug)
