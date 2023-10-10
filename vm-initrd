@@ -145,12 +145,20 @@ for f in $FILES; do
 		echo "initrd: Error: Cannot add '$ff': File not found." >&2
 		exit 1
 	fi
-	if [ -x "$ff" ] && ldd "$ff" >/dev/null 2>&1; then
-		echo "initrd: Warning: $ff isn't a statically linked executable." >&2
+	if [ -x "$ff" ]; then
+		ldd "$ff" >/dev/null 2>&1 && echo "initrd: Warning: $ff isn't a statically linked executable." >&2
+		ftype=executable
+	else
+		ftype=regular
 	fi
 	[[ "$ft" =~ /$ ]] && ft+=$(basename "$ff")
 	[ -n "$ft" ] || ft=$ff
 	mkdir -p "$(dirname "$CPIO/$ft")"
+	if [ -n "$VERBOSE" ]; then
+		ftmsg=
+		[ "$ff" = "$ft" ] || ftmsg=" -> $ft"
+		echo >&2 "initrd: Adding $ftype file $ff$ftmsg"
+	fi
 	cp -a "$ff" -T "$CPIO/$ft" || RET=2
 done
 
