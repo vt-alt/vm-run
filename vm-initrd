@@ -17,6 +17,7 @@ show_usage()
 	echo "  -b, --basedir=     Modules basedir (where /lib/modules located)."
 	echo "  --modules=         Add modules into IMAGE."
 	echo "  --add=X[:Y]        Add file/dir X into IMAGE at path Y."
+	echo "  --list             List initramfs content."
 	echo "  -v, --verbose      Increase verbosity level."
 	echo "  -h, --help         This help."
 	exit "$@"
@@ -39,6 +40,7 @@ ROOT=
 MODULES=
 VERBOSE=
 FILES=
+LIST=
 
 args=()
 while [ $# -gt 0 ]; do # opt
@@ -49,6 +51,7 @@ while [ $# -gt 0 ]; do # opt
 		-b)		shift; ROOT="${1?"$opt requires argument"}" ;;
 		--modules=*)	MODULES+=" $arg" ;;
 		--add=*)	FILES+=" $arg" ;;
+		-l | --list)	LIST=y ;;
 		-v | --verbose)	VERBOSE=1 ;;
 		-h | --help)	show_usage ;;
 		--)		shift; break ;;
@@ -61,6 +64,31 @@ set -- "${args[@]}" "$@"
 
 [ -n "${1-}" ] || { warning "Specifying IMAGE is required." ""; show_usage 1; }
 INITRD="$1"; shift
+
+if [ -n "$LIST" ]; then
+	# Need to disable pipefail for dd(1).
+	set +o pipefail
+	count=0
+	mime=$(file -b -L --mime-type "$INITRD")
+	# List microcode.
+	case "$mime" in
+		application/x-cpio)
+			{ count=$(cpio -tv < "$INITRD" 2>&1 >&3); } 3>&1
+			count=${count% blocks}
+			;;
+	esac
+	mime=$(dd if="$INITRD" skip="$count" 2>/dev/null | file -b --mime-type -)
+	case "$mime" in
+		application/gzip)   uncompress="gzip -dc" ;;
+		application/x-xz)   uncompress="xz -dc" ;;
+		application/zstd)   uncompress="zstd -dc" ;;
+		application/x-cpio) uncompress="cat" ;;
+		*) fatal "Unknown file type $mime for $INITRD" >&2; ;;
+	esac
+	dd if="$INITRD" skip="$count" 2>/dev/null | $uncompress | cpio -tv --quiet
+	exit
+fi
+
 if [ -n "${1-}" ]; then
 	KVER="$1"; shift
 else
