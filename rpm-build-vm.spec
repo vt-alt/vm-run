@@ -213,7 +213,11 @@ rm /tmp/filelist
 > %_rpmlibdir/z-vm-createimage.filetrigger
 
 kvm-ok
-timeout 300 vm-run --verbose uname -a
+timeout 300 vm-run --heredoc <<-EOF
+	uname -a
+	uname -a
+EOF
+! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
 timeout 300 vm-run --mem=max free -g
 timeout 300 vm-run --mem=256 --cpu=max lscpu
 df -h /tmp
@@ -222,7 +226,6 @@ rm /tmp/vm-tmpfs.qcow2
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
 rmdir /mnt/0
 rm /usr/src/ext4.0.img
-! timeout --preserve-status 300 vm-run --verbose exit 1 || exit 1
 timeout 300 vm-run --rootfs --verbose df
 rm /tmp/vm-ext4.img
 timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep Unknown'
