@@ -130,6 +130,22 @@ for f in $FILES; do
 	ff=${f%:*}
 	ft=${f#"$ff"}
 	ft=${ft#:}
+	if [ -z "$ff" ]; then
+		echo "initrd: Error: Cannot add empty filename for '$f'." >&2
+		exit 1
+	fi
+	if [ ! -f "$ff" ] && [[ ! "$ff" =~ / ]]; then
+		# Not directly accessible and does not contain '/' - perhaps executable from PATH?
+		fx=$(type -p "$ff") && ff=$fx
+		unset fx
+	fi
+	if [ ! -f "$ff" ]; then
+		echo "initrd: Error: Cannot add '$ff': File not found." >&2
+		exit 1
+	fi
+	if [ -x "$ff" ] && ldd "$ff" >/dev/null 2>&1; then
+		echo "initrd: Warning: $ff isn't a statically linked executable." >&2
+	fi
 	[[ "$ft" =~ /$ ]] && ft+=$(basename "$ff")
 	[ -n "$ft" ] || ft=$ff
 	mkdir -p "$(dirname "$CPIO/$ft")"

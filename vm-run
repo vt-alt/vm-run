@@ -41,7 +41,7 @@ DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
 BASHMINUS=-ex
-unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC
+unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -154,6 +154,7 @@ while [ $# -gt 0 ]; do # opt
 		--stdout)    STDOUT=y ;;
 		--stub-exit=*) ;;
 		--heredoc)   HEREDOC=y ;;
+		--rdshell)   RDSHELL=y ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
@@ -604,6 +605,21 @@ fi
 # which could be (and will be) under /usr/src, but we bind mount it
 # from 9p:/, thus 9p modules should be already loaded.
 MODULES+=" 9p 9pnet_virtio"
+
+if [ -v RDSHELL ]; then
+	APPEND+=" rdshell"
+	for i in busybox toybox; do
+		CMD=$(type -p "$i") && break
+	done
+	if [ -n "${CMD:-}" ]; then
+		# If it's somewhere else in PATH put it in /bin so initrd can find it.
+		RDADD+=" $CMD:/bin/$(basename "$CMD")"
+	else
+		echo "Error: busybox/toybox executable not found in PATH."
+		exit 1
+	fi
+	unset CMD
+fi
 
 # Prepare swap device for tmpfs in guest.
 if [ -v TMPFS ]; then
