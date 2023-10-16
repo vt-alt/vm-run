@@ -41,6 +41,7 @@ DRIVE_IF=virtio
 FAKESUDO=
 RUNUSER=
 BASHMINUS=-ex
+RDMODE=
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
 
 usage() {
@@ -81,6 +82,7 @@ usage() {
 	echo "    --loglevel=      Set loglevel= (implies --no-quiet), when argument isn't a"
 	echo "                     number it enables 'earlyprintk=serial ignore_loglevel' instead."
 	echo "Initrd options:"
+	echo "    --initrd         Run script in minimal initrd environment under busybox."
 	echo "    --modules='...'  Load named modules (space separated) in initrd."
 	echo "    --rdadd=X[:Y]    Add file/dir X into initrd at Y."
 	echo "Boot options:"
@@ -155,6 +157,7 @@ while [ $# -gt 0 ]; do # opt
 		--stub-exit=*) ;;
 		--heredoc)   HEREDOC=y ;;
 		--rdshell)   RDSHELL=y ;;
+		--initrd)    RDMODE=RD ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
@@ -165,7 +168,7 @@ done
 
 # If no command run shell
 if [ -z "$*" ] && [ ! -v HEREDOC ]; then
-	set bash
+	set sh
 	SBIN=y
 fi
 
@@ -607,8 +610,8 @@ fi
 MODULES+=" 9p 9pnet_virtio"
 
 unset rd_etc_profile
-if [ -v RDSHELL ]; then
-	APPEND+=" rdshell"
+[ -v RDSHELL ] && APPEND+=" rdshell"
+if [ -v RDSHELL ] || [ -n "$RDMODE" ]; then
 	for i in busybox toybox; do
 		CMD=$(type -p "$i") && break
 	done
@@ -625,6 +628,11 @@ if [ -v RDSHELL ]; then
 		exit 1
 	fi
 	unset CMD
+fi
+if [ -n "$RDMODE" ]; then
+	# 'declare' is not portable.
+	sed -i 's/^declare -x /export /' "$SCRIPT"
+	RDADD+=" $SCRIPT"
 fi
 
 # Prepare swap device for tmpfs in guest.
@@ -821,6 +829,8 @@ if [ -v LOGLEVEL ]; then
 	[[ "$LOGLEVEL" =~ initcall ]] && APPEND+=" initcall_debug"
 fi
 
+APPEND="console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 ${RDMODE}SCRIPT=$SCRIPT$APPEND"
+
 # QEMU Monitor is available (through character backend multiplexer), keys:
 #   C-a h    print this help
 #   C-a x    exit emulator
@@ -860,7 +870,7 @@ set +e
 		-kernel $KERNEL \
 		-initrd $INITRD \
 		$OPTS \
-		-append "console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 SCRIPT=$SCRIPT$APPEND"
+		-append "$APPEND"
 )
 declare -i ret=$?
 set -e

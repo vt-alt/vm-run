@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/vfs.h>
+#include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -49,14 +50,14 @@ static void warn(int err, const char *fmt, ...)
 		printf("\n");
 }
 
-static void runner(char *pathname)
+static void runner(char *pathname, char *script)
 {
 	char *argv0 = pathname;
 	if (strstr(pathname, "box")) {
 		/* Perhaps we don't want to run raw toybox but a shell from it. */
-		argv0 = "-sh";
+		argv0 = script ? "sh" : "-sh";
 	}
-	char * const args[] = { argv0, NULL };
+	char * const args[] = { argv0, script, NULL };
 	if (debug)
 		warn(0, "try %s [%s]", pathname, argv0);
 	execv(pathname, args);
@@ -65,10 +66,10 @@ static void runner(char *pathname)
 }
 
 #define SYS_PATH "/sbin:/usr/sbin:/bin:/usr/bin"
-static void try_executable(char *binary)
+static void try_executable(char *binary, char *script)
 {
 	if (strstr(binary, "/")) {
-		runner(binary);
+		runner(binary, script);
 		return;
 	}
 	/* Also try to run from '/'. */
@@ -83,7 +84,7 @@ static void try_executable(char *binary)
 			*tok = '\0';
 		if (asprintf(&where, "%s/%s", tok, binary) != -1) {
 			if (access(where, X_OK) == 0)
-				runner(where);
+				runner(where, script);
 			free(where);
 		} else
 			warn(errno, "asprintf");
@@ -109,11 +110,8 @@ static void loglevel(const char *level)
 	close(fd);
 }
 
-static int exec_rdshell(void)
+static int exec_shell(char *script)
 {
-	if (!rdshell)
-		return 0;
-	warn(0, "launching rdshell (%s)", rdshell);
 	/* Make user slightly more happy by setting some env. */
 	setenv("PS1", "rdshell# ", 0);
 	setenv("PATH", SYS_PATH, 0);
@@ -141,13 +139,40 @@ static int exec_rdshell(void)
 			warn(errno, "open '%s'", tty);
 	}
 notty:
-	try_executable(rdshell);
-	if (strcmp("sh", rdshell) == 0) {
-		try_executable("toybox");
-		try_executable("busybox");
+	/* Don't run script directly (yet). */
+	if (!script)
+		try_executable(rdshell, NULL);
+	if (script || strcmp("sh", rdshell) == 0) {
+		try_executable("toybox", script);
+		try_executable("busybox", script);
 	}
-	warn(0, "rdshell failed");
 	return -1;
+}
+
+static int exec_rdshell()
+{
+	if (!rdshell)
+		return 0;
+	warn(0, "launching rdshell (%s)", rdshell);
+	int ret = exec_shell(NULL);
+	warn(0, "rdshell failed");
+	return ret;
+}
+
+static void exec_rdscript(char *script)
+{
+	if (debug)
+		warn(0, "run rdscript=%s", script);
+	pid_t pid = fork();
+	if (pid == -1) {
+		warn(errno, "fork");
+	} else if (pid) {
+		int status;
+		wait(&status);
+	} else {
+		exec_shell(script);
+	}
+	exec_rdshell();
 }
 
 static void terminate()
@@ -367,6 +392,13 @@ int main(int argc, char **argv)
 	if (debug)
 		loglevel("8");
 	modprobe();
+	mount_devtmpfs();
+
+	char *rdscript = getenv("RDSCRIPT");
+	if (rdscript) {
+		exec_rdscript(rdscript);
+		terminate();
+	}
 
 	if (mkdir(newroot, 0755))
 		xerrno(errno, "mkdir '%s'", newroot);
@@ -374,8 +406,6 @@ int main(int argc, char **argv)
 	const char *root = get_option("root");
 	const char *rootfstype = get_option("rootfstype");
 	const char *rootflags  = get_option("rootflags");
-	if (root || rdshell)
-		mount_devtmpfs();
 	if (root) {
 		if (strncmp(root, "/dev/", 5)) {
 			mount_sys();
