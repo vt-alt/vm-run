@@ -11,6 +11,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <glob.h>
+#include <libgen.h>
+#include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,8 +171,34 @@ static void exec_rdscript(char *script)
 	} else if (pid) {
 		int status;
 		wait(&status);
+		int ret = -1, sig;
+		if (WIFEXITED(status)) {
+			ret = WEXITSTATUS(status);
+			if (debug)
+				warn(0, "rdscript exited with status %d", ret);
+		} else if (WIFSIGNALED(status)) {
+			sig = WTERMSIG(status);
+			if (debug)
+				warn(0, "rdscript terminated by signal %d", sig);
+			ret = 128 + sig;
+		}
+		char *dev_ec = getenv("exitcode");
+		if (dev_ec) {
+			FILE *fd = fopen(dev_ec, "w");
+			if (fd) {
+				fprintf(fd, "%d\n", ret);
+				fflush(fd);
+				fdatasync(fileno(fd));
+				fclose(fd);
+				if (debug)
+					warn(0, "wrote exitcode=%d into %s", ret, dev_ec);
+			} else
+				warn(errno, "open %s", dev_ec);
+		} else
+			warn(0, "Exit code %d is lost", ret);
 	} else {
 		exec_shell(script);
+		exit(127);
 	}
 	exec_rdshell();
 }
@@ -312,8 +340,12 @@ static char *get_option(const char *opt)
 	return NULL;
 }
 
+static int sysfs_mounted;
+
 static void mount_sys(void)
 {
+	if (sysfs_mounted)
+		return;
 	const char *sys = "/sys";
 	if (mkdir(sys, 0755))
 		xerrno(errno, "mkdir '%s'", sys);
@@ -321,13 +353,14 @@ static void mount_sys(void)
 		warn(0, "mount sysfs to %s", sys);
 	if (mount("sysfs", sys, "sysfs", 0, NULL))
 		warn(errno, "mount '%s'", sys);
+	else
+		sysfs_mounted++;
 }
 
 // source name from qemu -device ..,mount_tag=
 static char *find_mount_tag(void)
 {
 	mount_sys();
-
 	glob_t globbuf;
 	int n = glob("/sys/bus/virtio/drivers/9pnet_virtio/virtio*/mount_tag",
 		     GLOB_NOSORT, NULL, &globbuf);
@@ -347,6 +380,117 @@ static char *find_mount_tag(void)
 	if (fclose(fd) == EOF)
 		warn(errno, "fclose '%s'", mount_tag);
 	return buf[0] ? buf : NULL;
+}
+
+/* Read a short line without EOL (suitable for sysfs data). */
+static char *readln(char *path)
+{
+	static char buf[NAME_MAX];
+	FILE *fd = fopen(path, "r");
+	if (!fd) {
+		warn(errno, "open '%s'", path);
+		return NULL;
+	}
+	char *ptr = NULL;
+	if (fgets(buf, sizeof(buf), fd) && buf[0]) {
+		size_t len = strlen(buf);
+		if (buf[len - 1] == '\n')
+			buf[len - 1] = '\0';
+		ptr = buf;
+	}
+	fclose(fd);
+	return ptr;
+}
+
+static void sync_vports(void)
+{
+	mount_sys();
+	glob_t globbuf;
+	int n;
+	/*
+	 * Should we wait for vports to appear or not?
+	 *
+	 * If in `/sys/bus/virtio/devices` appears a directory
+	 *   `virtio<n>` then `-device virtio-serial` _maybe_ passed to QEMU.
+	 * We don't need to know for sure because of next condition. Then inside of the dir:
+	 * If `driver` is a symlink to `../../../../bus/virtio/drivers/virtio_console`
+	 *   then `virtio-console` kernel module is loaded.
+	 * If there is `virtio-ports` dir then `-device virtserialport`
+	 *   (or `-device virtioconsole` which is useless for us) is passed to QEMU. The dir
+	 *   appears very early.
+	 * After this the module may take quite some time to negotiate vports with QEMU.
+	 * Here we could wait for 'vport*' devices to appear
+	 *    in `/sys/class/virtio-ports` first (we need it to find a `name`)
+	 *    and in `/dev/vport*` after that. Then don't appear at once.
+	 */
+	if ((n = glob("/sys/bus/virtio/devices/virtio*/driver", GLOB_NOSORT, NULL, &globbuf))) {
+		if (debug)
+			warn(errno, "glob: no virtio device drivers (ret: %d)", n);
+		return;
+	}
+	int virtio_console = 0;
+	int i;
+	for (i = 0; i < globbuf.gl_pathc; i ++) {
+		char link[PATH_MAX];
+		char *path = globbuf.gl_pathv[i];
+		if (readlink(path, link, sizeof(link)) == -1)
+			continue;
+		if (!(path = basename(link)))
+			continue;
+		if (strcmp("virtio_console", path) == 0) {
+			virtio_console++;
+			break;
+		}
+	}
+	if (!virtio_console) {
+		if (debug)
+			warn(errno, "no virtio_console device driver (%d)", i);
+		return;
+	}
+	/* Preconditions succeeded. Now give them 0.1 second to appear. */
+	char dev_vport[32] = {};
+	const int try_max = 100;
+	for (int try = 0; try < try_max; try++) {
+		if (glob("/sys/class/virtio-ports/*/name", GLOB_NOSORT, NULL, &globbuf))
+			goto retry;
+		for (i = 0; i < globbuf.gl_pathc; i++) {
+			char *path = globbuf.gl_pathv[i];
+			char *tag;
+			if (!(tag = readln(path)) ||
+			    !(path = dirname(path)) ||
+			    !(path = basename(path)))
+				continue;
+			/*
+			 * Unfortunately, we cannot distinguish virtserialport from virtioconsole.
+			 * Latter vport if not accessible, giving ENXIO, instead we should have
+			 * been able to access hvc, but we don't know its name (or number).
+			 */
+			snprintf(dev_vport, sizeof(dev_vport), "/dev/%s", path);
+			setenv(tag, dev_vport, 0);
+			if (strcmp("exitcode", tag) == 0) {
+				if (debug)
+					warn(0, "found %s virtio-port: %s (iter=%d)", tag, path, try);
+				try = try_max;
+			}
+		}
+		globfree(&globbuf);
+retry:
+		usleep(1000);
+	}
+	if (!*dev_vport) {
+		if (debug)
+			warn(0, "no vports found");
+		return;
+	}
+	/* Now wait for the actual device, which can appear even later. */
+	for (int try = 0; try < try_max; try++) {
+		if (!access(dev_vport, F_OK)) {
+			if (debug)
+				warn(0, "found %s device (iter=%d)", dev_vport, try);
+			break;
+		}
+		usleep(1000);
+	}
 }
 
 static void mount_devtmpfs()
@@ -394,6 +538,7 @@ int main(int argc, char **argv)
 	modprobe();
 	mount_devtmpfs();
 
+	sync_vports();
 	char *rdscript = getenv("RDSCRIPT");
 	if (rdscript) {
 		exec_rdscript(rdscript);
