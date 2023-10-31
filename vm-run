@@ -609,6 +609,7 @@ fi
 # from 9p:/, thus 9p modules should be already loaded.
 MODULES+=" 9p 9pnet_virtio"
 
+unset ODEV ODEVEC
 unset rd_etc_profile
 [ -v RDSHELL ] && APPEND+=" rdshell"
 if [ -v RDSHELL ] || [ -n "$RDMODE" ]; then
@@ -633,6 +634,9 @@ if [ -n "$RDMODE" ]; then
 	# 'declare' is not portable.
 	sed -i 's/^declare -x /export /' "$SCRIPT"
 	RDADD+=" $SCRIPT"
+	# Perhaps, no shared fs in initrd. Prepare exitcode device.
+	ODEVEC=" -device virtserialport,chardev=ec,name=exitcode -chardev file,id=ec,path=$SCRIPT.ret"
+	ODEV=
 fi
 
 # Prepare swap device for tmpfs in guest.
@@ -654,7 +658,6 @@ if [ -v TMPFS ]; then
 fi
 
 # Setup output devices.
-unset ODEV
 if [ -v HVC ]; then
 	CONSOLE=hvc0
 	# It seems 'signal=off' handles ^C differently than '-serial mon:stdio'.
@@ -675,8 +678,8 @@ fi
 
 if [ -v ODEV ]; then
 	MODULES+=" virtio_console"
-	DEF+=" -device virtio-serial-$VIRTIOBUS $ODEV"
-	unset ODEV
+	DEF+=" -device virtio-serial-$VIRTIOBUS $ODEV ${ODEVEC-}"
+	unset ODEV ODEVEC
 fi
 
 # Sorted by preference (%buildroot first) and mtime (newer first)
