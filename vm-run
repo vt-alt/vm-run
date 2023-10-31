@@ -44,6 +44,7 @@ BASHMINUS=-ex
 RDMODE=
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
 unset RDBREAK
+DEF_SHELL=${SHELL:-bash}
 
 usage() {
 	echo "Usage: $(basename $0) [OPTIONS...] [COMMAND...]"
@@ -159,7 +160,7 @@ while [ $# -gt 0 ]; do # opt
 		--heredoc)   HEREDOC=y ;;
 		--rdshell)   RDSHELL=y ;;
 		--rdbreak=*) RDBREAK="${opt#*=}" ;;
-		--initrd)    RDMODE=RD ;;
+		--initrd)    RDMODE=RD; DEF_SHELL=sh ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
@@ -170,7 +171,7 @@ done
 
 # If no command run shell
 if [ -z "$*" ] && [ ! -v HEREDOC ]; then
-	set sh
+	set -- $DEF_SHELL
 	SBIN=y
 fi
 
