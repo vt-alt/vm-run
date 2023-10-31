@@ -30,6 +30,7 @@
 
 static int debug = 0;
 static char *rdshell = NULL;
+static char *rdbreak = NULL;
 
 static char *newroot = "/newroot";
 static char *modules = "modules.conf";
@@ -112,10 +113,11 @@ static void loglevel(const char *level)
 	close(fd);
 }
 
+static char *rdprompt = "rdshell# ";
 static int exec_shell(char *script)
 {
 	/* Make user slightly more happy by setting some env. */
-	setenv("PS1", "rdshell# ", 0);
+	setenv("PS1", rdprompt, 0);
 	setenv("PATH", SYS_PATH, 0);
 	struct termios ti;
 	if (tcgetattr(0, &ti) == 0) {
@@ -159,6 +161,26 @@ static int exec_rdshell()
 	int ret = exec_shell(NULL);
 	warn(0, "rdshell failed");
 	return ret;
+}
+
+static void rdbreak_shell(const char *breakpoint)
+{
+	if (!rdbreak)
+		return;
+	warn(0, "launching rdbreak shell (%s)", breakpoint);
+	pid_t pid = fork();
+	if (pid == -1) {
+		warn(errno, "fork");
+	} else if (pid) {
+		wait(NULL);
+	} else { /* child */
+		rdshell = "sh";
+		rdprompt = "rdbreak# ";
+		exec_shell(NULL);
+		warn(0, "rdbreak shell failed");
+		exit(127);
+	}
+	warn(0, "continue boot process");
 }
 
 static void exec_rdscript(char *script)
@@ -511,6 +533,7 @@ int main(int argc, char **argv)
 {
 	/* We want to enable debug options as early as possible. */
 	rdshell = getenv("rdshell");
+	rdbreak = getenv("rdbreak");
 	for (int i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "rddebug") == 0)
 			debug++;
@@ -518,7 +541,9 @@ int main(int argc, char **argv)
 			rdshell = "sh";
 	}
 	if (debug)
-		warn(0, "vm-run initrd%s", rdshell ? " [rdshell]" : "");
+		warn(0, "vm-run initrd%s%s",
+		     rdshell ? " [rdshell]" : "",
+		     rdbreak ? " [rdbreak]" : "");
 
 	/* poweroff is not always installed. */
 	if (argc > 0 && !strcmp(argv[0], "poweroff"))
@@ -541,6 +566,8 @@ int main(int argc, char **argv)
 	sync_vports();
 	char *rdscript = getenv("RDSCRIPT");
 	if (rdscript) {
+		rdbreak_shell("pre-script");
+		/* RDSCRIPT is only supposed to run in initrd env. */
 		exec_rdscript(rdscript);
 		terminate();
 	}
@@ -588,9 +615,10 @@ int main(int argc, char **argv)
 	if (mount(root, newroot, rootfstype, 0, rootflags))
 		xerrno(errno, "mount root=%s (type=%s flags=%s)", root, rootfstype, rootflags);
 
-	if (exec_rdshell())
+	if (rdbreak)
+		rdbreak_shell("pre-pivot");
+	else if (exec_rdshell())
 		terminate();
-	/* If you really want rdshell after this point use `init=` instead. */
 
 	if (debug)
 		warn(0, "switch root");
