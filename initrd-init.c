@@ -225,9 +225,10 @@ static void exec_rdscript(char *script)
 	exec_rdshell();
 }
 
+static unsigned int term_sleep = 1;
 static void terminate()
 {
-	sleep(1);
+	sleep(term_sleep);
 	if (reboot(RB_POWER_OFF) == -1)
 		warn(errno, "reboot");
 	exit(1);
@@ -569,6 +570,7 @@ int main(int argc, char **argv)
 		rdbreak_shell("pre-script");
 		/* RDSCRIPT is only supposed to run in initrd env. */
 		exec_rdscript(rdscript);
+		term_sleep = 0;
 		terminate();
 	}
 
