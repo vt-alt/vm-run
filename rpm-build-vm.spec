@@ -4,7 +4,7 @@
 %define _stripped_files_terminate_build 1
 
 Name: rpm-build-vm
-Version: 1.59
+Version: 1.60
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -244,6 +244,9 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Sun Nov 05 2023 Vitaly Chikunov <vt@altlinux.org> 1.60-alt1
+- Experimental support for --initrd mode (run script in initrd using busybox).
+
 * Tue Oct 10 2023 Vitaly Chikunov <vt@altlinux.org> 1.59-alt1
 - Improve rdshell environment usability.
 - Improve busybox/toybox compatibility for rdshell.
