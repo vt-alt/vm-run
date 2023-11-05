@@ -425,7 +425,7 @@ static char *readln(char *path)
 	return ptr;
 }
 
-static void sync_vports(void)
+static void sync_vports(const char *rdscript)
 {
 	mount_sys();
 	glob_t globbuf;
@@ -470,9 +470,10 @@ static void sync_vports(void)
 			warn(errno, "no virtio_console device driver (%d)", i);
 		return;
 	}
-	/* Preconditions succeeded. Now give them 0.1 second to appear. */
+	/* Preconditions succeeded. Now give them 0.1 second to appear, or if we going to call rdscript
+	 * then give them generous 1 second, because we almost sure it should be there. */
 	char dev_vport[32] = {};
-	const int try_max = 100;
+	const int try_max = rdscript ? 1000 : 100;
 	for (int try = 0; try < try_max; try++) {
 		if (glob("/sys/class/virtio-ports/*/name", GLOB_NOSORT, NULL, &globbuf))
 			goto retry;
@@ -502,7 +503,7 @@ retry:
 	}
 	if (!*dev_vport) {
 		if (debug)
-			warn(0, "no vports found");
+			warn(0, "no vports appeared (iter=%d)", try_max);
 		return;
 	}
 	/* Now wait for the actual device, which can appear even later. */
@@ -564,8 +565,8 @@ int main(int argc, char **argv)
 	modprobe();
 	mount_devtmpfs();
 
-	sync_vports();
 	char *rdscript = getenv("RDSCRIPT");
+	sync_vports(rdscript);
 	if (rdscript) {
 		rdbreak_shell("pre-script");
 		/* RDSCRIPT is only supposed to run in initrd env. */
