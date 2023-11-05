@@ -113,6 +113,7 @@ at "/tmp/vm-ext4.img" out of your hasher root to run vm-run with it as rootfs.
 Summary: Checkinstall for vm-run
 Group: Development/Other
 BuildArch: noarch
+Requires(pre): busybox
 Requires(pre): %name-createimage = %EVR
 Requires(pre): procps
 Requires(pre): time
@@ -217,6 +218,7 @@ timeout 300 vm-run --heredoc <<-EOF
 	uname -a
 	uname -a
 EOF
+timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
 ! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
 timeout 300 vm-run --mem=max free -g
 timeout 300 vm-run --mem=256 --cpu=max lscpu
