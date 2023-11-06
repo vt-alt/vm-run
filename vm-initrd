@@ -156,6 +156,9 @@ done < "$CPIO/modprobe.txt" \
 	3> "$CPIO/modules.conf"
 rm "$CPIO/modprobe.txt"
 cp -au /usr/lib/vm-run/initrd-init -T "$CPIO/init" || RET=2
+mkdir -p "$CPIO"/etc
+cp -a --parents /etc/os-release -t "$CPIO" &&
+ln -s "os-release" "$CPIO/etc/initrd-release" || RET=2
 for f in $FILES; do
 	ff=${f%:*}
 	ft=${f#"$ff"}
