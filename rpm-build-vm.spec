@@ -163,7 +163,10 @@ install -D -p -m 0755 kvm-ok      %buildroot%_bindir/kvm-ok
 
 %files
 
+%ifnarch %e2k
+# no busybox in e2k-alt-linux so far
 %files checkinstall
+%endif
 
 %files createimage
 %ifarch %supported_arches
