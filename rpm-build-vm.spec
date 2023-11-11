@@ -113,7 +113,9 @@ at "/tmp/vm-ext4.img" out of your hasher root to run vm-run with it as rootfs.
 Summary: Checkinstall for vm-run
 Group: Development/Other
 BuildArch: noarch
+%ifarch %supported_arches
 Requires(pre): busybox
+%endif
 Requires(pre): %name-createimage = %EVR
 Requires(pre): procps
 Requires(pre): time
@@ -163,10 +165,7 @@ install -D -p -m 0755 kvm-ok      %buildroot%_bindir/kvm-ok
 
 %files
 
-%ifnarch %e2k
-# no busybox in e2k-alt-linux so far
 %files checkinstall
-%endif
 
 %files createimage
 %ifarch %supported_arches
