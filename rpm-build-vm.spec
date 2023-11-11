@@ -5,7 +5,7 @@
 
 Name: rpm-build-vm
 Version: 1.60
-Release: alt2
+Release: alt3
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -254,6 +254,10 @@ vm-run --stub-exit=7 && exit 1 || test $? -eq 7
 %endif
 
 %changelog
+* Sat Nov 11 2023 Vitaly Chikunov <vt@altlinux.org> 1.60-alt3
+- spec: checkinstall: Remove BR:busybox for unsupported architectures.
+- spec: checkinstall: Add tests for unsupported architectures.
+
 * Sat Nov 11 2023 Michael Shigorin <mike@altlinux.org> 1.60-alt2
 - E2K: no busybox in e2k-alt-linux so far (and no %%checkinstall either).
 
