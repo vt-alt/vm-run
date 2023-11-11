@@ -243,6 +243,14 @@ find /tmp/vm.?????????? -maxdepth 0 | xargs -t -i -n1 rm {} {}.ret
 %check
 # Verify availability of KVM in girar & beehiver.
 ls -l /dev/kvm && test -w /dev/kvm
+
+%else
+# Test stub.
+%pre checkinstall
+set -ex
+vm-run --unknown-option date
+vm-run -- exit 1
+vm-run --stub-exit=7 && exit 1 || test $? -eq 7
 %endif
 
 %changelog
