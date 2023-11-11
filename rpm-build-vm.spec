@@ -5,7 +5,7 @@
 
 Name: rpm-build-vm
 Version: 1.60
-Release: alt1
+Release: alt2
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -247,6 +247,9 @@ ls -l /dev/kvm && test -w /dev/kvm
 %endif
 
 %changelog
+* Sat Nov 11 2023 Michael Shigorin <mike@altlinux.org> 1.60-alt2
+- E2K: no busybox in e2k-alt-linux so far (and no %%checkinstall either).
+
 * Sun Nov 05 2023 Vitaly Chikunov <vt@altlinux.org> 1.60-alt1
 - Experimental support for --initrd mode (run script in initrd using busybox).
 
