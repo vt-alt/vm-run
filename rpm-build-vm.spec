@@ -216,10 +216,13 @@ rm /tmp/filelist
 > %_rpmlibdir/z-vm-createimage.filetrigger
 
 kvm-ok
-timeout 300 vm-run --heredoc <<-EOF
+timeout 300 vm-run --heredoc <<-'EOF'
 	uname -a
-	uname -a
+	echo $USER '(date)' "(date)"
 EOF
+timeout 300 vm-run --kvm=cond "date; date"
+# Should show neither syntax error nor username.
+timeout 300 vm-run --kvm=cond echo '(date)' '$USER'
 if type -p busybox; then
 	timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
 fi
