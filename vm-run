@@ -210,8 +210,12 @@ if [ -v HEREDOC ]; then
 		exit 1
 	fi
 	printf " %q" "$(cat)" >> $SCRIPT
-else
+elif [ $# -eq 1 ]; then
+	# `bash -c` style command.
 	printf " %q" "$@" >> $SCRIPT
+else
+	# Exact command.
+	printf " '%q'" "$@" >> $SCRIPT
 fi
 printf ")\n" >> $SCRIPT
 # Flush console.
