@@ -220,7 +220,9 @@ timeout 300 vm-run --heredoc <<-EOF
 	uname -a
 	uname -a
 EOF
-timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
+if type -p busybox; then
+	timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
+fi
 ! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
 timeout 300 vm-run --mem=max free -g
 timeout 300 vm-run --mem=256 --cpu=max lscpu
