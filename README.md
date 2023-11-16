@@ -21,5 +21,6 @@ Collection of links to similar tools & scripts:
 * https://github.com/jollheef/out-of-tree 2018-
 * https://github.com/YADRO-KNS/ktest 2018-2020
 * https://gitlab.com/cip-project/cip-core/isar-cip-core/blob/master/start-qemu.sh 2019-
+* https://github.com/arighi/virtme-ng 2020-
 * https://github.com/obirvalger/vml 2021-
 * https://github.com/klark973/vm 2023-
