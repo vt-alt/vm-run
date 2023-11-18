@@ -394,7 +394,7 @@ elif [ "$BIOS" = "secureboot" ]; then
 		exit 1
 	fi
 elif [ "$BIOS" = "microvm" ]; then
-	OPTS+=" -bios bios-microvm.bin"
+	OPTS+=" -bios bios-microvm.bin -fw_cfg etc/sercon-port,string=0"
 elif [ "$BIOS" = "u-boot" ]; then
 	set +f
 	u_boot=( /usr/share/u-boot/qemu*/u-boot.bin )
