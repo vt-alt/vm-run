@@ -125,12 +125,6 @@ while [ $# -gt 0 ]; do # opt
 		--tcg)	     KVM= ;;
 		--kvm=*)     KVM="${opt#*=}" ;;
 		--microvm)   VIRTIOBUS=device OPTS+=" -M microvm" BIOS=microvm ;;
-		-add-fd | -accel | -acpitable | -action | -bios | -blockdev | -boot | -cdrom | -chardev | -compat | \
-		-cpu | -debugcon | -detved | -device | -drive | -dtb | -fda | -fsdev | -fw_cfg | -gdb | \
-		-global | -hda | -hdb | -hdc | -hdd | -icount | -m | -M | -machine | -mon | -msg | -mtdblock | \
-		-nic | -numa | -object | -overcommit | -pflash | -plugin | -qmp | -qmp-pretty | -readconfig | \
-		-rtc | -sd | -serial | -smbios | -smp | -tpmdev | -trace | -virtfs \
-			) shift; OPTS+=" $opt ${1:?"$opt requires argument"}" ;;
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     MEM="${opt#*=}" ;;
 		--cpu=*)     NRCPU="${opt#*=}" ;;
@@ -162,6 +156,23 @@ while [ $# -gt 0 ]; do # opt
 		--rdbreak=*) RDBREAK="${opt#*=}" ;;
 		--initrd)    RDMODE=RD; DEF_SHELL=sh ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
+		-audio-help|-daemonize|-enable-kvm|-full-screen|-jitdump|-mem-prealloc| \
+		-no-acpi|-nodefaults|-no-fd-bootchk|-nographic|-no-hpet|-no-reboot| \
+		-no-shutdown|-old-param|-only-migratable|-perfmap|-portrait|--preconfig|-S| \
+		-semihosting|-singlestep|-snapshot|-usb|-version|-win2k-hack|-xen-attach| \
+		-xen-domid-restrict \
+			) OPTS+=" $opt" ;;
+		-accel|-acpitable|-action|-add-fd|-append|-async-teardown|-audio|-audiodev| \
+		-bios|-blockdev|-boot|-cdrom|-chardev|-chroot|-compat|-cpu|-d|-D|-debugcon| \
+		-device|-dfilter|-display|-drive|-dtb|-dump-vmstate|-echr|-fda|-fdb|-fsdev| \
+		-fw_cfg|-g|-gdb|-global|-hda|-hdb|-hdc|-hdd|-icount|-incoming|-initrd| \
+		-iscsi|-k|-kernel|-L|-loadvm|-m|-machine|-mem-path|-mon|-monitor|-msg| \
+		-mtdblock|-name|-net|-netdev|-nic|-numa|-object|-option-rom|-overcommit| \
+		-parallel|-pflash|-pidfile|-plugin|-prom-env|-qmp|-qmp-pretty|-readconfig| \
+		-rotate|-rtc|-runas|-run-with|-sandbox|-sd|-seed|-semihosting-config| \
+		-serial|-set|-smbios|-smp|-spice|-tpmdev|-trace|-usbdevice|-uuid|-vga| \
+		-virtfs|-vnc|-watchdog-action|-xen-domid \
+			) shift; OPTS+=" $opt ${1:?"$opt requires argument"}" ;;
 		--) shift; break ;;
 		-*) echo "Unknown option $opt" >&2; usage ;;
 		*)  break ;;
