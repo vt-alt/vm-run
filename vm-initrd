@@ -193,6 +193,22 @@ for f in $FILES; do
 	cp -a "$ff" -T "$CPIO/$ft" || RET=2
 done
 
+# Precreate box tools symlinks.
+unset BOXBIN BOXLIST
+if [ -x "$CPIO/bin/busybox" ]; then
+	BOXBIN=bin/busybox
+	BOXLIST=--list-full
+elif [ -x "$CPIO/bin/toybox" ]; then
+	BOXBIN=bin/toybox
+	BOXLIST=--long
+fi
+if [ -v BOXBIN ]; then
+	( cd "$CPIO"
+	  mkdir -p {,usr/}{bin,sbin}
+	  "$BOXBIN" "$BOXLIST" | xargs -n1 "--max-procs=$(nproc)" \
+		  ln -sr "$BOXBIN" 2>/dev/null ||: )
+fi
+
 (cd "$CPIO" && find . | cpio -o -H newc --quiet -R 0:0 | gzip) > "$INITRD"
 rm -rf "$CPIO"
 exit $RET
