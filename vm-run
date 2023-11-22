@@ -394,7 +394,13 @@ elif [ "$BIOS" = "secureboot" ]; then
 		exit 1
 	fi
 elif [ "$BIOS" = "microvm" ]; then
-	OPTS+=" -bios bios-microvm.bin -fw_cfg etc/sercon-port,string=0"
+	BIOS=bios-microvm.bin
+	OPTS+=" -bios $BIOS"
+	# grep for optimized out string if !CONFIG_SERCON.
+	if grep -sq "sercon: using ioport" "/usr/share/qemu/$BIOS"; then
+		# Will print warning but nevertheless do not mess terminal.
+		OPTS+=" -fw_cfg etc/sercon-port,string=0"
+	fi
 elif [ "$BIOS" = "u-boot" ]; then
 	set +f
 	u_boot=( /usr/share/u-boot/qemu*/u-boot.bin )
@@ -410,9 +416,10 @@ elif [ -f "/usr/share/qemu/$BIOS" ]; then
 elif [ -n "$BIOS" ]; then
 	OPTS+=" -bios $BIOS"
 elif [ -e /usr/share/qemu/bios.bin ] && [[ "$HOSTTYPE" =~ [356x]86 ]]; then
-	# x86 BIOS that doesn't clear screen unlike default bios-256k.bin
+	# x86 BIOS (seabios-128k) that doesn't clear screen unlike default bios-256k.bin
 	OPTS+=" -bios bios.bin"
 fi
+unset BIOS
 
 unset NOKVM
 if kvm_need; then
