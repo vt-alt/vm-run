@@ -463,29 +463,11 @@ if ! mountpoint -q /proc; then
 	echo >&2 "  Try to enter hasher with: hsh-shell --mountpoints=/proc,/dev/kvm"
 fi
 
-[ "${MEM-}" = max ] && unset MEM SOFTMEM
-if [ -v MEM ]; then
-	M=$MEM
-elif [ -e /proc/meminfo ]; then
-	M=$(awk '$1 == "MemAvailable:" {print int($2 / 1024)}' /proc/meminfo)
-	[ -v SWAP ] && M=$((M + $(awk '$1 == "SwapFree:" {print int($2 / 1024)}' /proc/meminfo)))
-	# SOFTMEM is just to speed up boot times.
-	[ -v SOFTMEM ] && [ "$M" -gt "$SOFTMEM" ] && M=$SOFTMEM
-	# MAXMEM is hard QEMU limit (on 32-bit arches).
-	[ -v MAXMEM ] && [ "$M" -gt "$MAXMEM" ] && M=$MAXMEM
-	# Round to 256M for ppc
-	[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
-	[ $M -le 256 ] && unset M
-else
-        unset M
-fi
-[ -n "${M:-}" ] && DEF+=" -m $M"
-unset M
-
 [ "${NRCPU-}" = max ] && unset NRCPU SOFTCPU
 if [ -v NRCPU ]; then
 	# What user requested explicitly.
 	DEF+=" -smp cores=$NRCPU"
+	NPROCS=$NRCPU
 else
 	# No point to set cpu count to host nproc value if there is no kvm support,
 	# or this will cause long (lpj=) calibration delays.
@@ -502,8 +484,29 @@ else
 		DEF+=" -smp cores=$NPROCS"
 		unset nprocs_macro
 	fi
-	unset NPROCS
 fi
+
+unset M
+[ "${MEM-}" = max ] && unset MEM SOFTMEM
+if [ -v MEM ]; then
+	M=$MEM
+elif [ -e /proc/meminfo ]; then
+	M=$(awk '$1 == "MemAvailable:" {print int($2 / 1024)}' /proc/meminfo)
+	[ -v SWAP ] && M=$((M + $(awk '$1 == "SwapFree:" {print int($2 / 1024)}' /proc/meminfo)))
+	# SOFTMEM is just to speed up boot times.
+	[ -v SOFTMEM ] && [ "$M" -gt "$SOFTMEM" ] && M=$SOFTMEM
+	# MAXMEM is hard QEMU limit (on 32-bit arches).
+	[ -v MAXMEM ] && [ "$M" -gt "$MAXMEM" ] && M=$MAXMEM
+	# In case rlimit_soft_as is used.
+	AS=$(ulimit -v)
+	[ "$AS" = unlimited ] || { AS=$((AS/1024-512-$NPROCS*80)) && [ "$AS" -lt "$M" ] && M=$AS; }
+	# Round to 256M for ppc
+	[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
+	[ $M -le 256 ] && unset M
+	unset AS
+fi
+[ -n "${M:-}" ] && DEF+=" -m $M"
+unset M NPROCS
 
 # Enable sandbox
 if [ -n "$SANDBOX" ] && [ "$SANDBOX" != "off" ]; then
