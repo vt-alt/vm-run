@@ -43,7 +43,7 @@ RUNUSER=
 BASHMINUS=-xe
 RDMODE=
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
-unset RDBREAK
+unset RDBREAK UMAXCPU UMAXMEM
 DEF_SHELL=${SHELL:-bash}
 
 usage() {
@@ -53,6 +53,7 @@ usage() {
 	echo "QEMU options:"
 	echo "    --bios=          Use particular firmware (ex. uefi)"
 	echo "    --cpu=           Pass '-smp ...' to qemu (cpus)"
+	echo "    --maxcpu=        Limit cpu count to this value (or use NPROCS=)."
 	echo "    --drive=         Shortcut to pass '-drive file=' to qemu"
 	echo "    --ext4[=feat]    Implies automatic --rootfs with fs feature enabled."
 	echo "    --fat=DIR        Shortcut to pass DIR as rw FAT partition"
@@ -60,6 +61,7 @@ usage() {
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
 	echo "    --mem=           Pass '-m ...' to qemu (memory size)"
 	echo "                     Set to 'max' to exceed default soft limit."
+	echo "    --maxmem=        Limit auto-requested memory to this value."
 	echo "    --microvm        Use microvm machine type"
 	echo "    --multidevs=     9p multidevs mode (remap, forbid, warn)"
 	echo "    --overlay=FS[,SIZE=][:PATH]"
@@ -128,6 +130,8 @@ while [ $# -gt 0 ]; do # opt
 		--sandbox=*) SANDBOX=${opt#*=} ;;
 		--mem=*)     MEM="${opt#*=}" ;;
 		--cpu=*)     NRCPU="${opt#*=}" ;;
+		--maxcpu=*)  UMAXCPU="${opt#*=}" ;;
+		--maxmem=*)  UMAXMEM="${opt#*=}" ;;
 		--kernel=*)  KERNEL="${opt#*=}" ;;
 		--kernel*)   KERNEL= ;;
 		--depmod)    DEPMOD=y ;;
@@ -481,6 +485,7 @@ else
 		[ -v SOFTCPU ] && [ "$NPROCS" -gt "$SOFTCPU" ] && NPROCS=$SOFTCPU
 		# Exceeding MAXCPU will produce QEMU error.
 		[ -v MAXCPU ] && [ "$NPROCS" -gt "$MAXCPU" ] && NPROCS=$MAXCPU
+		[ -v UMAXCPU ] && [ "$NPROCS" -gt "$UMAXCPU" ] && NPROCS=$UMAXCPU
 		DEF+=" -smp cores=$NPROCS"
 		unset nprocs_macro
 	fi
@@ -500,6 +505,15 @@ elif [ -e /proc/meminfo ]; then
 	# In case rlimit_soft_as is used.
 	AS=$(ulimit -v)
 	[ "$AS" = unlimited ] || { AS=$((AS/1024-512-$NPROCS*80)) && [ "$AS" -lt "$M" ] && M=$AS; }
+	# User specified memory limit.
+	if [ -v UMAXMEM ]; then
+		case "$UMAXMEM" in
+			*[Kk]) UMAXMEM=${UMAXMEM%[Kk]} ;;
+			*[Mm]) UMAXMEM=$((${UMAXMEM%[Mm]}/1024)) ;;
+			*[Gg]) UMAXMEM=$((${UMAXMEM%[Gg]}/1048576)) ;;
+		esac
+		[ "$M" -gt "$UMAXMEM" ] && M=$UMAXMEM
+	fi
 	# Round to 256M for ppc
 	[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
 	[ $M -le 256 ] && unset M
