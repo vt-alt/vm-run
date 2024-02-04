@@ -22,6 +22,14 @@ timeout 300 vm-run --heredoc <<-'EOF'
 EOF
 # Will say: root (date) (date)
 
+# Check for RLIMIT_AS. QEMU is not very reliable about memory allocations and
+# will not always catch ENOMEM, sometimes it will just crash of obscurely hang.
+( if ulimit -v $((64*1024*1024)); then timeout 60 vm-run date; fi )
+( if ulimit -v $((32*1024*1024)); then timeout 60 vm-run date; fi )
+( if ulimit -v $((16*1024*1024)); then timeout 60 vm-run date; fi )
+( if ulimit -v $(( 8*1024*1024)); then timeout 60 vm-run --maxcpu=8 date; fi )
+( if ulimit -v $(( 4*1024*1024)); then timeout 60 vm-run --maxcpu=2 date; fi )
+
 timeout 300 vm-run --kvm=cond "date; date"
 # Should show neither syntax error nor username.
 timeout 300 vm-run --kvm=cond echo '(date)' '$USER'
