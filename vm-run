@@ -346,6 +346,7 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-i386
+		OPTS+=" -cpu max"
 		# qemu-system-i386: at most 2047 MB RAM can be simulated
 		# qemu-system-i386: ram size too large
 		MAXMEM=2047
