@@ -3,6 +3,11 @@
 %define _unpackaged_files_terminate_build 1
 %define _stripped_files_terminate_build 1
 
+%ifndef _priority_distbranch
+# We have it defined in macros but not in buildmacros.
+%define _priority_distbranch %(rpm --eval %%_priority_distbranch)
+%endif
+
 Name: rpm-build-vm
 Version: 1.65
 Release: alt1
@@ -113,8 +118,10 @@ at "/tmp/vm-ext4.img" out of your hasher root to run vm-run with it as rootfs.
 Summary: Checkinstall for vm-run
 Group: Development/Other
 BuildArch: noarch
+%if "%_priority_distbranch" == "sisyphus"
 %ifarch %supported_arches
 Requires(post): busybox
+%endif
 %endif
 Requires(post): %name-createimage = %EVR
 Requires(post): procps
