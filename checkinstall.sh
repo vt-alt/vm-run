@@ -35,6 +35,8 @@ timeout 300 vm-run --kvm=cond "date; date"
 timeout 300 vm-run --kvm=cond echo '(date)' '$USER'
 if type -p busybox; then
 	timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
+else
+	echo >&2 "No busybox thus --initrd test skipped."
 fi
 ! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
 timeout 300 vm-run --mem=max free -g
