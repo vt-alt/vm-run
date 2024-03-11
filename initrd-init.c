@@ -6,6 +6,7 @@
  * Copyright (c) 2020-2023 Vitaly Chikunov <vt@altlinux.org>
  */
 
+#define _GNU_SOURCE
 #include <blkid/blkid.h>
 #include <ctype.h>
 #include <errno.h>
