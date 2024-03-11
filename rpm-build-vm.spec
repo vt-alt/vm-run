@@ -10,7 +10,7 @@
 
 Name: rpm-build-vm
 Version: 1.65
-Release: alt1
+Release: alt2
 
 Summary: RPM helper to run tests in virtualised environment
 License: GPL-2.0-only
@@ -225,6 +225,10 @@ vm-run --stub-exit=7 && exit 1 || test $? -eq 7
 %endif
 
 %changelog
+* Mon Mar 11 2024 Vitaly Chikunov <vt@altlinux.org> 1.65-alt2
+- Fix rebuild with gcc-10.
+- Remove BR:busybox for non-sisyphus branches.
+
 * Mon Feb 26 2024 Vitaly Chikunov <vt@altlinux.org> 1.65-alt1
 - i586: Avoid 'mce: Unable to init MCE device' warning.
 
