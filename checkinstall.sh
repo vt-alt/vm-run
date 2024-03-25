@@ -40,7 +40,7 @@ else
 fi
 ! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
 timeout 300 vm-run --mem=max free -g
-timeout 300 vm-run --mem=256 --cpu=max lscpu
+timeout 300 vm-run --cpu=max lscpu
 df -h /tmp
 timeout 300 vm-run --tmp=max df -h /tmp
 rm /tmp/vm-tmpfs.qcow2
