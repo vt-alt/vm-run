@@ -314,7 +314,7 @@ case "$HOSTTYPE" in
 		# qemu-system-aarch64: Invalid SMP CPUs 1234. The max CPUs supported by machine 'virt-7.2' is 512
 		MAXCPU=512
 		EDK2=/usr/share/AAVMF
-		EFI_CODE=( QEMU_EFI.fd AAVMF_CODE.fd )
+		EFI_CODE=( QEMU_EFI.fd AAVMF_CODE.fd QEMU_EFI.kernel.fd QEMU_EFI.silent.fd )
 		;;
 	aarch32)
 		PACKAGE=qemu-system-aarch64-bundle-core
