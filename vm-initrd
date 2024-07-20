@@ -89,6 +89,12 @@ if [ -n "$LIST" ]; then
 	exit
 fi
 
+if [ -n "$ROOT" ] &&
+   [ ! -d "$ROOT/lib/modules" ] &&
+   [ -d "$ROOT/usr/lib/modules" ]; then
+	ROOT="$ROOT/usr"
+fi
+
 if [ -n "${1-}" ]; then
 	KVER="$1"; shift
 else
