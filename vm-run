@@ -807,6 +807,10 @@ unset KERN
 
 ROOT=${KERNEL%%/boot/*}
 if [ -n "$ROOT" ]; then
+	if [ ! -d "$ROOT/lib/modules" ] &&
+	   [ -d "$ROOT/usr/lib/modules" ]; then
+		ROOT="$ROOT/usr"
+	fi
 	# Two spaces to defend against accidental injection, since
 	# command is '%q'-escaped and cannot contain consecutive spaces.
 	printf '#  MODPROBE_OPTIONS=%q\n' "--dirname=$ROOT" >> $SCRIPT
