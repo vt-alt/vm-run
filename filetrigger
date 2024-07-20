@@ -3,7 +3,7 @@
 
 [ -d /.host -a -d /.in -a -d /.out ] || exit 0
 
-LC_ALL=C grep -Eqs '^/boot/(System.map|config|vmlinuz)-|^/lib/modules/' || exit 0
+LC_ALL=C grep -Eqs '^/boot/(System.map|config|vmlinuz)-|^(/usr)?/lib/modules/' || exit 0
 
 # Create modules.dep.bin, modules.alias.bin
 ls /boot/vmlinuz-* \
