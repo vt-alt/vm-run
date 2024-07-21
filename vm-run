@@ -542,7 +542,11 @@ if [ -n "$SANDBOX" ] && [ "$SANDBOX" != "off" ]; then
 fi
 
 if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
-	DEF+=" -nic user,model=virtio-net-pci"
+	if [ $VIRTIOBUS = pci ]; then
+		DEF+=" -nic user,model=virtio-net-pci"
+	else
+		DEF+=" -device virtio-net-$VIRTIOBUS,netdev=user -netdev user,id=user"
+	fi
 	if type ip >/dev/null 2>&1; then
 		:
 	elif type ifconfig >/dev/null 2>&1; then
