@@ -43,7 +43,7 @@ RUNUSER=
 BASHMINUS=-xe
 RDMODE=
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
-unset RDBREAK UMAXCPU UMAXMEM
+unset RDBREAK UMAXCPU UMAXMEM VIRTIOFS
 DEF_SHELL=${SHELL:-bash}
 
 usage() {
@@ -143,6 +143,7 @@ while [ $# -gt 0 ]; do # opt
 		--rootfs)    ROOTFS=$ROOTFS_DEF_IMAGE ;;
 		--ext4)      NOBIND=y; IMPLYROOTFS=y; ;;
 		--ext4=*)    NOBIND=y; IMPLYROOTFS=y; FSFEAT="${opt#*=}" ;;
+		--virtiofs)  VIRTIOFS=y ;;
 		--no-bind)   NOBIND=y ;;
 		--no-virtio) DRIVE_IF= ;;
 		--scsi)      DRIVE_IF=scsi ;;
@@ -533,7 +534,7 @@ elif [ -e /proc/meminfo ]; then
 	unset AS
 fi
 [ -n "${M:-}" ] && DEF+=" -m $M"
-unset M NPROCS
+unset NPROCS
 
 # Enable sandbox
 if [ -n "$SANDBOX" ] && [ "$SANDBOX" != "off" ]; then
@@ -551,6 +552,26 @@ if [ -e /proc/net/dev ] && [ $(wc -l < /proc/net/dev) -gt 3 ]; then
 		echo "  need to hsh-install iproute2 or net-tools" >&2
 	fi
 fi
+
+unset VFSD_SOCK
+if [ -v VIRTIOFS ]; then
+	VIRTIOFS=/usr/libexec/virtiofsd
+	if [ ! -x "$VIRTIOFS" ]; then
+		echo >&2 "Error: $VIRTIOFS command not found, install 'virtiofsd'."
+		exit 1
+	fi
+	VFSD_SOCK=${TMPDIR:-/tmp}/vm-vfsd.sock
+	VIRTIOFS+=" --shared-dir=/ --sandbox=none --socket-path=$VFSD_SOCK --announce-submounts --log-level=error"
+	# size= expects value in bytes, but -m is in megabytes, unless qualified.
+	SZ=${M:-256m}
+	[[ $SZ =~ [[:digit:]]$ ]] && SZ+=m
+	DEF+=" -chardev socket,id=vfsd,path=$VFSD_SOCK"
+	DEF+=" -device vhost-user-fs-$VIRTIOBUS,queue-size=1024,chardev=vfsd,tag=vfsd"
+	DEF+=" -object memory-backend-memfd,id=mem,size=$SZ,share=on"
+	DEF+=" -M memory-backend=mem"
+	MODULES+=" virtiofs fuse"
+fi
+unset M SZ
 
 if [ -v RSYNC ]; then
 	if type -p rsync >/dev/null; then
@@ -914,6 +935,12 @@ APPEND="console=$CONSOLE mitigations=off nokaslr $QUIET panic=-1 ${RDMODE}SCRIPT
 #   show-task-states(t) unmount(u) show-blocked-tasks(w) dump-ftrace-buffer(z)
 #
 
+[ -v VIRTIOFS ] && (
+	unset LD_PRELOAD
+	test "$NOCMD" || set -x
+	$VIRTIOFS &
+)
+
 set +e
 # -serial mon:stdio  to make ^C not break qemu
 # -device virtio-rng-pci  for virtio-rng
@@ -936,6 +963,13 @@ set +e
 		-append "$APPEND"
 )
 declare -i ret=$?
+
+if [ -v VFSD_SOCK ]; then
+	read pid < "$VFSD_SOCK.pid" &&
+	kill "$pid" 2>/dev/null
+	rm -f -- "$VFSD_SOCK" "$VFSD_SOCK.pid"
+fi
+
 set -e
 if [ $ret -ge 132 -a $ret -le 159 ]; then
 	echo >&2 "  NOTICE: This is crash of $QEMU, not of the Linux kernel!"
