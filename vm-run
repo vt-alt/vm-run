@@ -666,7 +666,11 @@ if [ -n "$ROOTFS" ]; then
 	[[ "$ROOTFSOPTS" =~ ,if= ]] || \
 	case "$DRIVE_IF" in
 		virtio)
-			OPTS+=",if=virtio"
+			if [ $VIRTIOBUS = pci ]; then
+				OPTS+=",if=virtio"
+			else
+				OPTS+=",if=none,id=vd0 -device virtio-blk-device,drive=vd0"
+			fi
 			MODULES+=" virtio_blk"
 			;;
 		scsi)
