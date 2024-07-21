@@ -670,7 +670,7 @@ if [ -n "$ROOTFS" ]; then
 			MODULES+=" virtio_blk"
 			;;
 		scsi)
-			OPTS+=",if=none,id=sd0 -device virtio-scsi-pci -device scsi-hd,drive=sd0"
+			OPTS+=",if=none,id=sd0 -device virtio-scsi-$VIRTIOBUS -device scsi-hd,drive=sd0"
 			MODULES+=" virtio_scsi sd_mod"
 			;;
 		'')
