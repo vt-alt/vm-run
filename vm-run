@@ -678,6 +678,9 @@ if [ -n "$ROOTFS" ]; then
 			MODULES+=" virtio_scsi sd_mod"
 			;;
 		'')
+			if [ $VIRTIOBUS = device ]; then
+				OPTS+=",if=none,id=hd0 -device isa-ide -device ide-hd,drive=hd0"
+			fi
 			MODULES+=" sd_mod ata_piix"
 			[ "$HOSTTYPE" = powerpc64le ] && MODULES+=" ibmvscsi"
 			;;
