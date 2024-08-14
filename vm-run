@@ -738,7 +738,7 @@ if [ -v TMPFS ]; then
 	[ "${SWAPSZ%[BKMGTbkmgt]}" = "$SWAPSZ" ] && SWAPSZ+='M'
 	# mkswap wants secure permissions.
 	(umask 077; truncate -s "$SWAPSZ" "$SWAPIMG"~)
-	/sbin/mkswap -q -L tmpfs "$SWAPIMG"~
+	/sbin/mkswap -L tmpfs "$SWAPIMG"~ >/dev/null
 	qemu-img convert "$SWAPIMG"~ "$SWAPIMG" -O qcow2
 	rm -- "$SWAPIMG"~
 	OPTS+=" -drive file=$SWAPIMG$SWAPOPT"
