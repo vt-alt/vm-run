@@ -49,7 +49,7 @@ rmdir /mnt/0
 rm /usr/src/ext4.0.img
 timeout 300 vm-run --rootfs --verbose df
 rm /tmp/vm-ext4.img
-timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep Unknown'
+timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep -F "printk: console [hvc0] enabled"'
 timeout 300 vm-run --tcg --mem='' --cpu=1 cat /proc/cpuinfo
 
 # Clean up without '-f' ensures these files existed.
