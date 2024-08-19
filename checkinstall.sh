@@ -53,7 +53,7 @@ timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep -E "printk:( legacy)? conso
 timeout 300 vm-run --tcg --mem='' --cpu=1 cat /proc/cpuinfo
 
 # Clean up without '-f' ensures these files existed.
-rm /tmp/initramfs-*un-def-alt*.img
+rm /tmp/initramfs-*-*-alt*.img
 
 # SCRIPT and exit code files form each vm-run invocation. Each SCRIPT file
 # should correspond to '.ret' file.
