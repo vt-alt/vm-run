@@ -36,9 +36,14 @@ BuildRequires: /dev/kvm
 BuildRequires: shellcheck
 %endif
 
+%if "%_priority_distbranch" == "sisyphus"
+# Sisyphus have even newer kernels than un-def.
+Requires(pre): kernel-latest
+%else
 # Try to load un-def kernel this way to avoid "forbidden dependencies"
 # from sisyphus_check.
-Requires(pre): kernel >= 5.7
+Requires(pre): kernel
+%endif
 %endif
 
 Requires(pre): %name-run = %EVR
