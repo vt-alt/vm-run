@@ -67,4 +67,26 @@ _vm_run()
 } &&
     complete -F _vm_run vm-run vm-create-image
 
+# Very simplistic completion for modprobe, modinfo, and rmmod, just showing
+# module names, when bash-completion is not installed.
+
+[ -e /usr/share/bash-completion/completions/modprobe ] ||
+_modprobe()
+{
+    local cur=${COMP_WORDS[$COMP_CWORD]}
+    local root=
+    [[ "$MODPROBE_OPTIONS" =~ --dirname=([^[:space:]]+) ]] && root=${BASH_REMATCH[1]}
+    local modpath=$root/lib/modules/$(uname -r)
+    COMPREPLY=( $(compgen -W "$(grep -sPo '[^/]+(?=\.ko)' "$modpath/modules.order")" -- "$cur") )
+} &&
+    complete -F _modprobe modprobe modinfo
+
+[ -e /usr/share/bash-completion/completions/rmmod ] ||
+_rmmod()
+{
+    local cur=${COMP_WORDS[$COMP_CWORD]}
+    COMPREPLY=( $(compgen -W "$(cut -d' ' -f1 /proc/modules)" -- "$cur") )
+} &&
+    complete -F _rmmod rmmod
+
 # ex: filetype=sh sw=4 et
