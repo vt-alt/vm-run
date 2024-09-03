@@ -9,7 +9,7 @@
 %endif
 
 Name: rpm-build-vm
-Version: 1.70
+Version: 1.71
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -231,6 +231,11 @@ vm-run --stub-exit=7 && exit 1 || test $? -eq 7
 %endif
 
 %changelog
+* Tue Sep 03 2024 Vitaly Chikunov <vt@altlinux.org> 1.71-alt1
+- Simplistic bash completion for modprobe, modinfo, and rmmod.
+- Change the logic for obtaining the latest kernel; rely on the
+  rpm-build-kernel macros to signal its presence.
+
 * Mon Aug 19 2024 Vitaly Chikunov <vt@altlinux.org> 1.70-alt1
 - In Sisyphus bring latest kernel instead of un-def.
 
