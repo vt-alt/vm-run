@@ -23,6 +23,7 @@ Source: %name-%version.tar
 %define supported_arches %ix86 x86_64 ppc64le aarch64 armh
 
 %ifarch %supported_arches
+BuildRequires(pre): rpm-build-kernel
 BuildRequires: glibc-devel-static
 BuildRequires: libblkid-devel-static
 # For %%check. This does not verify the package but verifies
@@ -36,7 +37,7 @@ BuildRequires: /dev/kvm
 BuildRequires: shellcheck
 %endif
 
-%if "%_priority_distbranch" == "sisyphus"
+%if 0%{?kernel_latest:1}
 # Sisyphus have even newer kernels than un-def.
 Requires(pre): kernel-latest
 %else
