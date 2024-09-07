@@ -1,6 +1,7 @@
 #!/bin/bash
 # checkinstall tests for vm-run
 
+. /etc/os-release
 PS4=$'\n+ '
 set -ex
 # qemu in tcg mode can hang un-def-5.10 kernel on ppc64 if smp>1 on "smp:
@@ -51,6 +52,10 @@ timeout 300 vm-run --rootfs --verbose df
 rm /tmp/vm-ext4.img
 timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep -E "printk:( legacy)? console \[hvc0\] enabled"'
 timeout 300 vm-run --tcg --mem='' --cpu=1 cat /proc/cpuinfo
+
+if [ "$ALT_BRANCH_ID" = sisyphus ]; then
+	rpm -qa PROVIDES=kernel-latest | grep '^kernel-image-'
+fi
 
 # Clean up without '-f' ensures these files existed.
 rm /tmp/initramfs-*-*-alt*.img
