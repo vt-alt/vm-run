@@ -85,6 +85,7 @@ usage() {
 	echo "    --no-quiet       Do not boot kernel too quietly"
 	echo "    --loglevel=      Set loglevel= (implies --no-quiet), when argument isn't a"
 	echo "                     number it enables 'earlyprintk=serial ignore_loglevel' instead."
+	echo "    --klog           Enable kernel.printk=8 just before executing the command."
 	echo "Initrd options:"
 	echo "    --initrd         Run script in minimal initrd environment under busybox."
 	echo "    --modules='...'  Load named modules (space separated) in initrd."
@@ -160,6 +161,7 @@ while [ $# -gt 0 ]; do # opt
 		--rdshell)   RDSHELL=y ;;
 		--rdbreak=*) RDBREAK="${opt#*=}" ;;
 		--initrd)    RDMODE=RD; DEF_SHELL=sh ;;
+		--klog)      PRINTK=8 ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		-audio-help|-daemonize|-enable-kvm|-full-screen|-jitdump|-mem-prealloc| \
 		-no-acpi|-nodefaults|-no-fd-bootchk|-nographic|-no-hpet|-no-reboot| \
@@ -206,6 +208,10 @@ fi
 # and when we are in hsh-shell with pts and manually running rpmbuild.
 if [ -t 0 ] && [ -v RPM_BUILD_DIR ]; then
 	exec </dev/null
+fi
+
+if [ -n "${PRINTK-}" ]; then
+	printf 'echo %q > /proc/sys/kernel/printk\n' "$PRINTK" >> "$SCRIPT"
 fi
 
 # libfakeroot tries to communicate with faked and hangs.
