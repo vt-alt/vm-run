@@ -155,7 +155,7 @@ while read -r j f; do
 	case "$bn" in
 		*.gz)  gzip -qd "$CPIO/$bn" ;;
 		*.xz)  xz   -qd "$CPIO/$bn" ;;
-		*.zst) zstd -qd "$CPIO/$bn" ;;
+		*.zst) zstd -qd --rm "$CPIO/$bn" ;;
 	esac
 	printf '%s\n' "$un" >&3
 done < "$CPIO/modprobe.txt" \
