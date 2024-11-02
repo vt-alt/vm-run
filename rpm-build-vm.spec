@@ -43,7 +43,8 @@ Requires(pre): kernel-latest
 %else
 # Try to load un-def kernel this way to avoid "forbidden dependencies"
 # from sisyphus_check.
-Requires(pre): kernel
+# `>= 5.7` is to avoid kernel-image-xenomai.
+Requires(pre): kernel >= 5.7
 %endif
 %endif
 
