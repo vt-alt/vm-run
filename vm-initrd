@@ -79,10 +79,10 @@ if [ -n "$LIST" ]; then
 	esac
 	mime=$(dd if="$INITRD" skip="$count" 2>/dev/null | file -b --mime-type -)
 	case "$mime" in
-		application/gzip)   uncompress="gzip -dc" ;;
-		application/x-xz)   uncompress="xz -dc" ;;
-		application/zstd)   uncompress="zstd -dc" ;;
-		application/x-cpio) uncompress="cat" ;;
+		application/x-cpio)			uncompress="cat" ;;
+		application/x-gzip|application/gzip)	uncompress="gzip -dc" ;;
+		application/x-xz)			uncompress="xz -dc" ;;
+		application/x-zstd|application/zstd)	uncompress="zstd -dc" ;;
 		*) fatal "Unknown file type $mime for $INITRD" >&2; ;;
 	esac
 	dd if="$INITRD" skip="$count" 2>/dev/null | $uncompress | cpio -tv --quiet
