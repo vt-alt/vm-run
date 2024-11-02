@@ -321,6 +321,12 @@ generate_debugfs_commands() {
 	}
 }
 
+e2pkg=$(rpm -q --qf '%{VERSION}' e2fsprogs)
+e2ok='1.46.2'
+if printf '%s\n%s\n' "$e2pkg" "$e2ok" | sort -CV; then
+	echo >&2 "WARNING: e2fsprogs version below $e2ok is known to fail to create correct ext4 image!"
+fi
+
 for dir in "${src[@]}"; do
 	generate_debugfs_commands "$dir" | ($SETX; /sbin/debugfs -f- -w "$image") >&"$NULL"
 done
