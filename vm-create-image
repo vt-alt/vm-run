@@ -89,7 +89,7 @@ for opt; do # opt
 		--mkfs=*)       mkfs+=" $arg" ;;
 		-v | --verbose) verbose+=1 ;;
 		-h | --help)    show_usage ;;
-		-*)             fatal "Unknown option $opt" ;;
+		-*)             fatal "Error: Unknown option $opt" ;;
 		*)              set -- "$@" "$opt" ;;
 	esac
 done
@@ -167,7 +167,7 @@ elif [ -v copy_mode ]; then
 	[ $# -gt 2 ] && fatal "Too much arguments for cp mode"
 	info=$(/sbin/debugfs "$image" -R "stat $1" 2>&1 | head -2)
 	if [[ "$info" =~ File.not.found ]]; then
-		echo "$info" >&2
+		echo "Error: $info" >&2
 		exit 1
 	elif [[ "$info" =~ Type:.directory ]]; then
 		mkdir -p "$2"

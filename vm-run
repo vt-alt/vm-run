@@ -104,7 +104,7 @@ usage() {
 	echo "    --verbose        Show vm actions verbosely"
 	echo "    --               No options after this marker"
 	echo "    command...       Will be eval'ed on the target"
-	exit 1
+	exit 0
 }
 
 while [ $# -gt 0 ]; do # opt
@@ -181,7 +181,7 @@ while [ $# -gt 0 ]; do # opt
 		-virtfs|-vnc|-watchdog-action|-xen-domid \
 			) shift; OPTS+=" $opt ${1:?"$opt requires argument"}" ;;
 		--) shift; break ;;
-		-*) echo "Unknown option $opt" >&2; usage ;;
+		-*) echo "Error: Unknown option $opt" >&2; exit 1 ;;
 		*)  break ;;
 	esac
 	shift
