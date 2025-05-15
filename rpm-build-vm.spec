@@ -66,6 +66,8 @@ on supported architectures (this one (%_arch) is unsupported).
 %package run
 Summary: vm-run virtualized runner
 Group: Development/Other
+# Due to /usr/sbin/kvm-ok
+Conflicts: cpu-checker
 
 # Other arches will get a stub which will always return success
 %ifarch %supported_arches
