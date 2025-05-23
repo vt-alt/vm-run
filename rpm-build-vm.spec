@@ -9,7 +9,7 @@
 %endif
 
 Name: rpm-build-vm
-Version: 1.75
+Version: 1.76
 Release: alt1
 
 Summary: RPM helper to run tests in virtualised environment
@@ -224,6 +224,9 @@ vm-run --stub-exit=7 && exit 1 || test $? -eq 7
 %endif
 
 %changelog
+* Fri May 23 2025 Vitaly Chikunov <vt@altlinux.org> 1.76-alt1
+- Unprivilege ping, improve fixperms and depmod message.
+
 * Sat Nov 16 2024 Vitaly Chikunov <vt@altlinux.org> 1.75-alt1
 - Consistently print 'Error:' on failures and do not append usage.
 
