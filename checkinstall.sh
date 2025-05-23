@@ -34,6 +34,9 @@ EOF
 timeout 300 vm-run --kvm=cond "date; date"
 # Should show neither syntax error nor username.
 timeout 300 vm-run --kvm=cond echo '(date)' '$USER'
+# Network and access to ping(1).
+timeout 300 vm-run --kvm=cond ping 127.1 -c 1
+timeout 300 vm-run --kvm=cond mount
 if type -p busybox; then
 	timeout 300 vm-run --initrd --append=rddebug 'uname -a; exit 7' || test $? -eq 7
 else

@@ -1,7 +1,28 @@
 #!/bin/sh
-# filetrigger for newly installed kernels
+# fixperms filetrigger for newly installed kernels and packages
+#
+# Note: The script is run under rooter so `test -r` isn't useful.
 
-[ -d /.host -a -d /.in -a -d /.out ] || exit 0
+[ -d /.host -a -d /.in -a -d /.out ] || {
+        echo >&2 "vm-run.filetrigger is not allowed outside hasher environments"
+        exit
+}
+
+# u&mount should be readable to use inside vm
+control mount unprivileged
+
+# There is no unprivileged control for ping. Additionally, 9pfs needs a
+# directory readable to access the executable.
+[ -e /usr/libexec/ping/ping ] && chmod 755 /usr/libexec/ping /usr/libexec/ping/ping
+
+# Useful to enable audit for some kernel-modules tests
+[ -e /sbin/auditctl ] && chmod a+rx /sbin/auditctl
+
+# For --overlay=
+chmod a+twx /mnt
+
+# Allow user creation (for openssh)
+chmod a+r /etc/login.defs
 
 LC_ALL=C grep -Eqs '^/boot/(System.map|config|vmlinuz)-|^(/usr)?/lib/modules/' || exit 0
 
@@ -10,7 +31,7 @@ ls /boot/vmlinuz-* \
 | while read KERN; do
 	KVER=${KERN#/boot/vmlinuz-}
 	if [ ! -s /lib/modules/$KVER/modules.dep.bin ]; then
-		echo "Running depmod for $KVER"
+		echo >&2 "rpm-build-vm: Running depmod for $KVER"
 		depmod "$KVER"
 	fi
 done

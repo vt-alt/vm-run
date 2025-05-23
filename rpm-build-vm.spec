@@ -133,6 +133,8 @@ Requires(post): busybox
 %endif
 %endif
 Requires(post): %name-createimage = %EVR
+Requires(post): iproute2
+Requires(post): iputils
 Requires(post): procps
 Requires(post): time
 
@@ -203,19 +205,7 @@ install -Dp checkinstall.sh %buildroot%_libexecdir/vm-run.ci/checkinstall
 %_sysconfdir/bashrc.d/vm*.sh
 
 %post run
-# u&mount should to be readable to use inside vm
-control mount unprivileged
-
-# Useful for enable audit for some kernel-modules tests
-[ ! -x /sbin/auditctl ] || chmod a+rx /sbin/auditctl
-
-# For --overlay=
-chmod a+twx /mnt
-
-# Allow user creation (for openssh)
-chmod a+r /etc/login.defs
-
-# Call filetrigger for the past kernels.
+# Call filetrigger for the past kernels and packages.
 find /boot | %_rpmlibdir/vm-run.filetrigger
 
 %post checkinstall -p %_libexecdir/vm-run.ci/checkinstall
