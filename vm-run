@@ -1006,6 +1006,6 @@ if [ -s $SCRIPT.ret ]; then
 	exit $ret
 else
 	# Possible kernel crash or C-a x
-	echo "  Error: no exit code is found, failure." >&2
+	echo "vm-run: Error: no exit code is found, failure." >&2
 	exit 1
 fi
