@@ -43,7 +43,7 @@ RUNUSER=
 BASHMINUS=-xe
 RDMODE=
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
-unset RDBREAK UMAXCPU UMAXMEM VIRTIOFS
+unset RDBREAK UMAXCPU UMAXMEM VIRTIOFS NOSTDIN
 DEF_SHELL=${SHELL:-bash}
 
 usage() {
@@ -163,6 +163,7 @@ while [ $# -gt 0 ]; do # opt
 		--initrd)    RDMODE=RD; DEF_SHELL=sh ;;
 		--klog)      PRINTK=8 ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
+		-n)          NOSTDIN=y ;;
 		-audio-help|-daemonize|-enable-kvm|-full-screen|-jitdump|-mem-prealloc| \
 		-no-acpi|-nodefaults|-no-fd-bootchk|-nographic|-no-hpet|-no-reboot| \
 		-no-shutdown|-old-param|-only-migratable|-perfmap|-portrait|--preconfig|-S| \
@@ -206,9 +207,8 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
 fi
 # Hack to prevent SIGTTOU when QEMU tries to set up echo on stdio,
 # and when we are in hsh-shell with pts and manually running rpmbuild.
-if [ -t 0 ] && [ -v RPM_BUILD_DIR ]; then
-	exec </dev/null
-fi
+[ -t 0 ] && [ -v RPM_BUILD_DIR ] && NOSTDIN=y
+[ -v NOSTDIN ] && exec </dev/null
 
 if [ -n "${PRINTK-}" ]; then
 	printf 'echo %q > /proc/sys/kernel/printk\n' "$PRINTK" >> "$SCRIPT"
