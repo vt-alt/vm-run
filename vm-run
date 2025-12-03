@@ -42,6 +42,8 @@ FAKESUDO=
 RUNUSER=
 BASHMINUS=-xe
 RDMODE=
+ARTIFACTS=("$SCRIPT" "$SCRIPT.ret")
+RMARTIFACTS=y
 unset NRCPU MAXCPU RSYNC SWAP MEM MAXMEM SOFTMEM TMPFS FSFEAT STDOUT HVC HEREDOC RDSHELL
 unset RDBREAK UMAXCPU UMAXMEM VIRTIOFS NOSTDIN
 DEF_SHELL=${SHELL:-bash}
@@ -162,6 +164,7 @@ while [ $# -gt 0 ]; do # opt
 		--rdbreak=*) RDBREAK="${opt#*=}" ;;
 		--initrd)    RDMODE=RD; DEF_SHELL=sh ;;
 		--klog)      PRINTK=8 ;;
+		--no-rm)     unset RMARTIFACTS ;;
 		[-+][xe] | [-+][xe][xe]) BASHMINUS+=" $opt" ;;
 		-n)          NOSTDIN=y ;;
 		-audio-help|-daemonize|-enable-kvm|-full-screen|-jitdump|-mem-prealloc| \
@@ -619,7 +622,10 @@ if [ -n "$ROOTFS" ]; then
 	ROOTFSFILE=${ROOTFS%%,*}
 	ROOTFSOPTS=${ROOTFS#"$ROOTFSFILE"}
 	[ "$ROOTFSCREATE" = "auto" ] && [ -e "$ROOTFS" ] && ROOTFSCREATE=
-	[ -z "$ROOTFSCREATE" ] || vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2) ${FSFEAT:+--mkfs="-O$FSFEAT"}
+	[ -z "$ROOTFSCREATE" ] || {
+		vm-create-image "$ROOTFSFILE" $([[ "$ROOTFS" =~ qcow2 ]] && echo --qcow2) ${FSFEAT:+--mkfs="-O$FSFEAT"}
+		ARTIFACTS+=("$ROOTFSFILE")
+	}
 	FORMAT=$(qemu-img info "$ROOTFSFILE" | grep -Po '^file format: \K.*')
 	if [ "$FORMAT" = "qcow2" ]; then
 		tmpfile=$(mktemp)
@@ -658,6 +664,7 @@ if [ -n "$ROOTFS" ]; then
 			if [ ! -e "$ROOTFS$_EXT" ]; then
 				[ -n "$VERBOSE" ] && echo >&2 "Creating writable overlay qcow2 image."
 				qemu-img create -b "$ROOTFSFILE" -F "$FORMAT" -f qcow2 "$ROOTFS$_EXT" $NOSNAPSHOT
+				ARTIFACTS+=("$ROOTFS$_EXT")
 				[ -n "$NOSNAPSHOT" ] && printf "#  CMD: RESIZE2FS=$UUID\n" >> $SCRIPT
 			fi
 			OPTS+="$_EXT"
@@ -736,6 +743,7 @@ fi
 # Prepare swap device for tmpfs in guest.
 if [ -v TMPFS ]; then
 	SWAPIMG=/tmp/vm-tmpfs.qcow2
+	ARTIFACTS+=("$SWAPIMG")
 	SWAPSZ=${TMPFS%%,*}
 	SWAPOPT=${TMPFS#"$SWAPSZ"}
 	# Clean up used space from previous run.
@@ -913,6 +921,7 @@ if [ ! -f "${INITRD-}" ]; then
 		echo "Error: Some errors ($?) while generating initrd." >&2
 		exit 1
 	}
+	ARTIFACTS+=("$INITRD")
 	unset CPIO MODULES KVER skip f bn un
 fi
 unset ROOT
@@ -1003,6 +1012,7 @@ fi
 if [ -s $SCRIPT.ret ]; then
 	# Exit due to script reasons.
 	read ret < $SCRIPT.ret
+	[ "$ret" = 0 ] && [ -v RMARTIFACTS ] && [ ! -t 0 ] && rm -- "${ARTIFACTS[@]}"
 	exit $ret
 else
 	# Possible kernel crash or C-a x
