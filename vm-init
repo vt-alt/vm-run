@@ -166,7 +166,7 @@ if [ -n "$RSYNC" ]; then
 fi
 
 # Handle --overlay option
-UMOUNT=
+unset UMOUNT ARTIFACTS
 ov_count=0
 img_count=0
 prev_cmdline=$cmdline
@@ -178,6 +178,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 	mnt=/mnt/$ov_count
 	ov_count=$((ov_count+1))
 	mkdir -p $mnt
+	ARTIFACTS+=("$mnt")
 	if [ -b "$ovfs" ]; then
 		# full device path
 		V mount $V -n "$ovfs" $mnt
@@ -195,6 +196,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 		size=${ovopts#*size=}
 		size=${size%%,*}
 		img=/usr/src/ext4.$img_count.img
+		ARTIFACTS+=("$img")
 		# do not delete data if it already exists
 		if ! /sbin/tune2fs -l $img >/dev/null 2>&1; then
 			> $img
@@ -212,7 +214,7 @@ while [ -z "${prev_cmdline/* OVERLAY=*}" ]; do
 		: ${ovpath:=/usr/src}
 		V modprobe overlay
 		V mount $V -t overlay -olowerdir=$ovpath,upperdir=$mnt/upper,workdir=$mnt/work overlay $ovpath
-		UMOUNT=$ovpath
+		UMOUNT+=("$ovpath" "$mnt")
 	fi
 	unset mnt ovfs ovopts ovpath
 done
@@ -240,7 +242,8 @@ RET=$?
 # TODO: We can miss some stderr output here, for example script is not
 # executable due to incorrect TMPDIR.
 
-[ "$UMOUNT" ] && umount $V -n --lazy $UMOUNT
+[ -v UMOUNT ] && umount $V -n --lazy "${UMOUNT[@]}"
+[ -v ARTIFACTS ] && rm -fd -- "${ARTIFACTS[@]}"
 case "$SCRIPT" in /tmp/*) umount $V -n --lazy /tmp;; esac
 echo $RET 2>/dev/null > "$SCRIPT.ret" ||
 	echo >&2 "Exit code $RET is lost"
