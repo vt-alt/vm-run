@@ -43,15 +43,18 @@ else
 	echo >&2 "No busybox thus --initrd test skipped."
 fi
 ! timeout --preserve-status 300 vm-run "true; false; true" || exit 1
+# Delete artifacts after failed runs.
+rm /tmp/vm.* /tmp/initramfs-*-*-alt*.img
 timeout 300 vm-run --mem=max free -g
 timeout 300 vm-run --cpu=max lscpu
 df -h /tmp
 timeout 300 vm-run --tmp=max df -h /tmp
-rm /tmp/vm-tmpfs.qcow2
+! rm /tmp/vm-tmpfs.qcow2 || exit 1
 timeout 300 vm-run --verbose --overlay=ext4 uname -a
-rmdir /mnt/0
-rm /usr/src/ext4.0.img
+! rmdir /mnt/0 || exit 1
+! rm /usr/src/ext4.0.img || exit 1
 timeout 300 vm-run --rootfs --verbose df
+# The image is created by rpm-build-vm-createimage
 rm /tmp/vm-ext4.img
 timeout 300 vm-run --hvc --no-quiet 'dmesg -r | grep -E "printk:( legacy)? console \[hvc0\] enabled"'
 timeout 300 vm-run --tcg --mem='' --cpu=1 cat /proc/cpuinfo
@@ -60,9 +63,7 @@ if [ "$ALT_BRANCH_ID" = sisyphus ]; then
 	rpm -qa PROVIDES=kernel-latest | grep '^kernel-image-'
 fi
 
-# Clean up without '-f' ensures these files existed.
-rm /tmp/initramfs-*-*-alt*.img
+! rm /tmp/initramfs-*-*-alt*.img || exit 1
+! rm /tmp/vm.* || exit 1
 
-# SCRIPT and exit code files form each vm-run invocation. Each SCRIPT file
-# should correspond to '.ret' file.
-find /tmp/vm.?????????? -maxdepth 0 | xargs -t -i -n1 rm {} {}.ret
+exit 0
