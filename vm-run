@@ -57,7 +57,7 @@ usage() {
 	echo "    --cpu=           Pass '-smp ...' to qemu (cpus)"
 	echo "    --maxcpu=        Limit cpu count to this value (or use NPROCS=)."
 	echo "    --drive=         Shortcut to pass '-drive file=' to qemu"
-	echo "    --ext4[=feat]    Implies automatic --rootfs with fs feature enabled."
+	echo "    --ext4[=feat]    Automatic --rootfs [with fs feature enabled] and --no-bind."
 	echo "    --fat=DIR        Shortcut to pass DIR as rw FAT partition"
 	echo "    --hvc            Enable high speed serial virtconsole"
 	echo "    --kvm=cond       Only run if KVM is present otherwise exit 0"
