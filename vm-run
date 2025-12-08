@@ -369,6 +369,7 @@ case "$HOSTTYPE" in
 		PACKAGE=qemu-system-x86-core
 		CONSOLE=ttyS0
 		QEMU=qemu-system-x86_64
+		SOFTMEM=787455
 		# qemu-system-x86_64: Invalid SMP CPUs 1234. The max CPUs supported by machine 'pc-i440fx-7.2' is 255
 		# qemu-system-x86_64: Invalid SMP CPUs 2553. The max CPUs supported by machine 'pc-q35-7.2' is 288
 		# But even for q35: smpboot: native_cpu_up: bad cpu 256
@@ -537,6 +538,7 @@ elif [ -e /proc/meminfo ]; then
 		esac
 		[ "$M" -gt "$UMAXMEM" ] && M=$UMAXMEM
 	fi
+	[ "$HOSTTYPE" = x86_64 ] && [ "$M" -gt 787455 ] && OPTS+=" -cpu qemu64,host-phys-bits=true"
 	# Round to 256M for ppc
 	[ "$HOSTTYPE" = powerpc64le ] && M=$((M / 256 * 256))
 	[ $M -le 256 ] && unset M
