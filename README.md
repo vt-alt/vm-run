@@ -25,6 +25,7 @@ secureboot, microvm machine, VirtIO/SCSI devices, hvc console, etc.
 * https://github.com/obirvalger/vml 2021-
 * https://github.com/arighi/virtme-ng 2022-
 * https://github.com/danobi/vmtest 2022-
+* https://github.com/cilium/little-vm-helper 2022-
 * https://github.com/klark973/vm 2023-2023
 * https://github.com/DaanDeMeyer/mkosi-kernel 2023-
 * https://github.com/AsahiLinux/muvm 2024-
