@@ -929,6 +929,8 @@ fi
 unset ROOT
 [ -v rd_etc_profile ] && rm "$rd_etc_profile"
 
+[ -v DISPLAY ] && nographic= || nographic=-nographic
+
 if [ -v LOGLEVEL ]; then
 	QUIET=
 	if [[ "$LOGLEVEL" =~ ^[[:digit:]]+$ ]]; then
@@ -980,7 +982,7 @@ set +e
 	$QEMU \
 		$DEF \
 		-nodefaults \
-		-nographic \
+		$nographic \
 		-no-reboot \
 		-fsdev local,id=root,path=/,security_model=none,multidevs=$MULTIDEVS \
 		-device virtio-9p-$VIRTIOBUS,fsdev=root,mount_tag=virtio-9p:/ \
