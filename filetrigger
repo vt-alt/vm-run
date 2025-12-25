@@ -27,10 +27,10 @@ chmod a+r /etc/login.defs
 LC_ALL=C grep -Eqs '^/boot/(System.map|config|vmlinuz)-|^(/usr)?/lib/modules/' || exit 0
 
 # Create modules.dep.bin, modules.alias.bin
-ls /boot/vmlinuz-* \
-| while read KERN; do
+ls -d /boot/vmlinuz-* \
+| while read -r KERN; do
 	KVER=${KERN#/boot/vmlinuz-}
-	if [ ! -s /lib/modules/$KVER/modules.dep.bin ]; then
+	if [ -s "/lib/modules/$KVER/modules.dep" ]; then
 		echo >&2 "rpm-build-vm: Running depmod for $KVER"
 		depmod "$KVER"
 	fi
