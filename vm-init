@@ -65,7 +65,7 @@ fi
 V mount -t tmpfs tmpfs /var/log
 V mount -t devtmpfs -o mode=0755,nosuid,noexec devtmpfs /dev
 
-CONSOLE=${cmdline#console=}
+CONSOLE=${cmdline# console=}
 CONSOLE=${CONSOLE%% *}
 if [ -c /dev/"$CONSOLE" ]; then
 	exec 0<>/dev/"$CONSOLE" 1>&0 2>&0
