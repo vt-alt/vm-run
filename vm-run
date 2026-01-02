@@ -203,15 +203,16 @@ if [ $(env - whoami) = root ]; then
 	exit
 fi
 
+# Hack to prevent SIGTTOU when QEMU tries to set up echo on stdio,
+# and when we are in hsh-shell with pts and manually running rpmbuild.
+[ -t 0 ] && [ -v RPM_BUILD_DIR ] && NOSTDIN=y
+[ -v NOSTDIN ] && exec </dev/null
+
 # Signal to vm-init that we don't have tty on stdio,
 # so it will not try to determine terminal size
 if [ ! -t 0 ] || [ ! -t 1 ]; then
 	printf "#  CMD: NOTTY=y\n" >> $SCRIPT
 fi
-# Hack to prevent SIGTTOU when QEMU tries to set up echo on stdio,
-# and when we are in hsh-shell with pts and manually running rpmbuild.
-[ -t 0 ] && [ -v RPM_BUILD_DIR ] && NOSTDIN=y
-[ -v NOSTDIN ] && exec </dev/null
 
 if [ -n "${PRINTK-}" ]; then
 	printf 'echo %q > /proc/sys/kernel/printk\n' "$PRINTK" >> "$SCRIPT"
